@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Drew Bednar</title><link href="https://androiddrew.com/" rel="alternate"></link><link href="https://androiddrew.com/atom.xml" rel="self"></link><id>https://androiddrew.com/</id><updated>2020-06-05T00:00:00-04:00</updated><entry><title>Welcome to the blag!</title><link href="https://androiddrew.com/2020/06/first-article/" rel="alternate"></link><published>2020-06-05T00:00:00-04:00</published><updated>2020-06-05T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.com,2020-06-05:/2020/06/first-article/</id><summary type="html">&lt;p&gt;Welcome to the Blag. That's right the blag.&lt;/p&gt;
+&lt;p&gt;I've been programming in Python since graduate school (2010), and over the years I've built blogging engines in both 
+&lt;a href="https://flask.palletsprojects.com/"&gt;Flask&lt;/a&gt; and &lt;a href="https://wagtail.io/features/"&gt;Wagtail&lt;/a&gt; (Django). One major downside to that approach was having to maintain an …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Welcome to the Blag. That's right the blag.&lt;/p&gt;
+&lt;p&gt;I've been programming in Python since graduate school (2010), and over the years I've built blogging engines in both 
+&lt;a href="https://flask.palletsprojects.com/"&gt;Flask&lt;/a&gt; and &lt;a href="https://wagtail.io/features/"&gt;Wagtail&lt;/a&gt; (Django). One major downside to that approach was having to maintain an application server and a 
+database just to host a simple blog. This time around I've listened to my peers and chosen to use &lt;a href="https://blog.getpelican.com/"&gt;Pelican&lt;/a&gt; the static 
+site generator.&lt;/p&gt;
+&lt;p&gt;Looking back on the last 10 years I regret not documenting my projects and taking the time to present my 
+accomplishments. Over the next few months you will find entries here covering machine learning, continuous delivery, web 
+application development, robotics, CAD/CAM, engineering, and more. First up, I'll be tackling a build of the &lt;a href="https://stanfordstudentrobotics.org/pupper"&gt;Standford 
+Robotics Pupper&lt;/a&gt;. Stay tuned!&lt;/p&gt;</content><category term="Blog"></category><category term="blog"></category></entry></feed>
