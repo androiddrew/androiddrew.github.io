@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Basic Metas -->
+	<meta charset="utf-8">
+	<title>Pupper Software on Ubuntu | Drew Bednar</title>
+	<meta name="description" content="I assume the project expects you to use Raspbian, I instead elected to use the 64 bit version of Ubuntu, because I have something wrong with my brain and always do things the hard way. This of course required a few extra …">
+	<meta name="author" content="">
+	<link rel="author" href=""/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<!-- Twitter Cards and Open Graph -->
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:creator" content="">
+	<meta name="twitter:domain" content="androiddrew.com">
+	<meta name="twitter:site" content="">
+	<meta property="og:title" content="Pupper Software on Ubuntu">
+	<meta property="og:description" content="I assume the project expects you to use Raspbian, I instead elected to use the 64 bit version of Ubuntu, because I have something wrong with my brain and always do things the hard way. This of course required a few extra …">
+	<meta property="og:image" content="../images/icons/avatar.png">
+	<meta property="og:type" content="article">
+	<meta property="og:url" content="../drafts/pupper-ubuntu-arm.html">
+
+	<!-- Stylesheets and Web Fonts -->
+	<link href="/theme/style.min.css?4efa2398" rel="stylesheet">
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+	<!-- Favicons -->
+	<link rel="apple-touch-icon" sizes="180x180" href="/images/icons/apple-touch-icon.png">
+	<link rel="icon" type="image/png" href="/images/icons/favicon-16x16.png" sizes="16x16">
+	<link rel="icon" type="image/png" href="/images/icons/favicon-32x32.png" sizes="32x32">
+	<meta name="theme-color" content="">
+
+	<meta name="msapplication-TileColor" content="">
+	<meta name="msapplication-TileImage" content="/images/icons/mstile-150x150.png">
+	<meta name="msapplication-square70x70logo" content="/images/icons/mstile-small.png">
+	<meta name="msapplication-square150x150logo" content="/images/icons/mstile-medium.png">
+	<meta name="msapplication-wide310x150logo" content="/images/icons/mstile-wide.png">
+	<meta name="msapplication-square310x310logo" content="/images/icons/mstile-large.png">
+
+	<!--[if lt IE 9]>
+	<script src="/theme/js/html5shiv.min.js"></script>
+	<script src="/theme/js/respond.min.js"></script>
+	<![endif]-->
+</head>
+
+<body>
+	<div class="container">
+		<aside>
+			<a href="/"><img id="avatar" alt="Site Avatar" src="/images/icons/avatar.png"></a>
+			<div id="name"><a href="/">Drew Bednar</a></div>
+			<div id="bio">Developer and maker from&nbsp;Kalamazoo, MI.</div>
+
+			<div id="sidebar-links">
+				<a href="/about/">About</a>&nbsp;|&nbsp;<a href="/archive/">Archive</a>
+			</div>
+
+			<div id="social">
+				<a href="https://github.com/androiddrew" title="GitHub" class="icon fa fa-github"></a>
+				<a href="https://keybase.io/androiddrew" title="Keybase" class="icon fa fa-key"></a>
+			</div>
+
+			<hr id="sidebar-divider">
+		</aside>
+
+		<article>
+	<h1 class="title"><a href="/drafts/pupper-ubuntu-arm.html" title="Permalink to Pupper Software on Ubuntu">Pupper Software on Ubuntu</a></h1>
+	<time class="date" datetime="2020-06-21 00:00:00-04:00">June 21, 2020</time>
+	<div class="content">
+		<p>I assume the project expects you to use Raspbian, I instead elected to use the 64 bit version of Ubuntu, because I have 
+something wrong with my brain and always do things the hard way. This of course required a few extra steps after 
+setting up the SD card. </p>
+<ol>
+<li>I updated the hostname in <code>/etc/hostname</code> to <code>pupper</code></li>
+<li>Since Ubuntu uses the <a href="https://netplan.io/examples">netplan tool</a> for configuration you will need to either add the 
+appropriate config block to the <a href="https://ubuntu.com/tutorials/how-to-install-ubuntu-on-your-raspberry-pi#3-wifi-or-ethernet"><code>network-config</code> under the system boot</a>
+, or add a <code>.yaml</code> file under <code>/etc/netplan</code>. I found myself already logged in so I opted for the latter. Here is a 
+minimal example config.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="err">#/etc/netplan/config.yaml</span>
+<span class="c">network:</span>
+<span class="c">  version: 2</span>
+<span class="c">  wifis:</span>
+<span class="c">    wlan0:</span>
+<span class="c">      dhcp4: true</span>
+<span class="c">      dhcp6: false</span>
+<span class="c">      access-points:</span>
+<span class="c">        &quot;network_ssid_name&quot;:</span>
+<span class="c">          password: &quot;**********&quot;</span>
+</code></pre></div>
+
+
+<p>After saving the file just <code>sudo netplan apply</code>. You can then confirm your config worked by checking that the interface 
+received and ip with <code>netplan ip leases wlan0</code>, <code>wlan0</code> being the interface we defined above. Note you can add multiple 
+access points to the file if you will be taking your device to other locations.</p>
+<ol>
+<li>While Python3.8 ships with Ubuntu it does not have venv or pip installed. </li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="err">sudo apt install -y python3-venv python3-pip</span>
+</code></pre></div>
+
+
+<h3>Following most of the Stanford install instructions</h3>
+<p>I did not include the <a href="https://pupper.readthedocs.io/en/latest/code/code.html#rpi-setup">RPI-Setup</a>. One of the things 
+this will do is set the filesystem to readonly because power failures, like in robotics will card SD Card file corruption.
+I am pretty sure I can accomplish this here https://medium.com/swlh/make-your-raspberry-pi-file-system-read-only-raspbian-buster-c558694de79.</p>
+<h2>What went wrong</h2>
+<p>I didn't have udev admin rules applied. Needed </p>
+<p>https://github.com/chrippa/ds4drv/blob/master/udev/50-ds4drv.rules</p>
+<div class="codehilite"><pre><span></span><code><span class="err">sudo udevadm trigger</span>
+</code></pre></div>
+
+
+<p>Next </p>
+<div class="codehilite"><pre><span></span><code><span class="n">Can</span><span class="err">&#39;</span><span class="n">t</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="nl">hci0</span><span class="p">:</span><span class="w"> </span><span class="k">Operation</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">permitted</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
+<span class="o">[</span><span class="n">info</span><span class="o">][</span><span class="n">controller 1</span><span class="o">]</span><span class="w"> </span><span class="n">Created</span><span class="w"> </span><span class="n">devices</span><span class="w"> </span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="k">input</span><span class="o">/</span><span class="n">js0</span><span class="w"> </span><span class="p">(</span><span class="n">joystick</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="k">input</span><span class="o">/</span><span class="n">event0</span><span class="w"> </span><span class="p">(</span><span class="n">evdev</span><span class="p">)</span><span class="w"></span>
+<span class="o">[</span><span class="n">info</span><span class="o">][</span><span class="n">bluetooth</span><span class="o">]</span><span class="w"> </span><span class="n">Scanning</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">devices</span><span class="w"></span>
+</code></pre></div>
+
+
+<p>Running the command</p>
+<div class="codehilite"><pre><span></span><code><span class="n">hciconfig</span> <span class="o">-</span><span class="n">a</span>
+
+
+<span class="n">hci0</span><span class="p">:</span>   <span class="k">Type</span><span class="p">:</span> <span class="k">Primary</span>  <span class="n">Bus</span><span class="p">:</span> <span class="n">UART</span>
+        <span class="n">BD</span> <span class="n">Address</span><span class="p">:</span> <span class="n">DC</span><span class="p">:</span><span class="n">A6</span><span class="p">:</span><span class="mi">32</span><span class="p">:</span><span class="mi">84</span><span class="p">:</span><span class="n">AE</span><span class="p">:</span><span class="n">C7</span>  <span class="n">ACL</span> <span class="n">MTU</span><span class="p">:</span> <span class="mi">1021</span><span class="p">:</span><span class="mi">8</span>  <span class="n">SCO</span> <span class="n">MTU</span><span class="p">:</span> <span class="mi">64</span><span class="p">:</span><span class="mi">1</span>
+        <span class="n">UP</span> <span class="n">RUNNING</span>
+        <span class="n">RX</span> <span class="n">bytes</span><span class="p">:</span><span class="mi">2687</span> <span class="n">acl</span><span class="p">:</span><span class="mi">0</span> <span class="n">sco</span><span class="p">:</span><span class="mi">0</span> <span class="n">events</span><span class="p">:</span><span class="mi">102</span> <span class="n">errors</span><span class="p">:</span><span class="mi">0</span>
+        <span class="n">TX</span> <span class="n">bytes</span><span class="p">:</span><span class="mi">2987</span> <span class="n">acl</span><span class="p">:</span><span class="mi">0</span> <span class="n">sco</span><span class="p">:</span><span class="mi">0</span> <span class="n">commands</span><span class="p">:</span><span class="mi">83</span> <span class="n">errors</span><span class="p">:</span><span class="mi">0</span>
+        <span class="n">Features</span><span class="p">:</span> <span class="mi">0</span><span class="n">xbf</span> <span class="mi">0</span><span class="n">xfe</span> <span class="mi">0</span><span class="n">xcf</span> <span class="mi">0</span><span class="n">xfe</span> <span class="mi">0</span><span class="n">xdb</span> <span class="mi">0</span><span class="n">xff</span> <span class="mi">0</span><span class="n">x7b</span> <span class="mi">0</span><span class="n">x87</span>
+        <span class="n">Packet</span> <span class="k">type</span><span class="p">:</span> <span class="n">DM1</span> <span class="n">DM3</span> <span class="n">DM5</span> <span class="n">DH1</span> <span class="n">DH3</span> <span class="n">DH5</span> <span class="n">HV1</span> <span class="n">HV2</span> <span class="n">HV3</span>
+        <span class="n">Link</span> <span class="n">policy</span><span class="p">:</span> <span class="n">RSWITCH</span> <span class="n">SNIFF</span>
+        <span class="n">Link</span> <span class="k">mode</span><span class="p">:</span> <span class="n">SLAVE</span> <span class="n">ACCEPT</span>
+        <span class="n">Name</span><span class="p">:</span> <span class="s1">&#39;pupper&#39;</span>
+        <span class="k">Class</span><span class="p">:</span> <span class="mi">0</span><span class="n">x000000</span>
+        <span class="n">Service</span> <span class="n">Classes</span><span class="p">:</span> <span class="n">Unspecified</span>
+        <span class="n">Device</span> <span class="k">Class</span><span class="p">:</span> <span class="n">Miscellaneous</span><span class="p">,</span>
+        <span class="n">HCI</span> <span class="k">Version</span><span class="p">:</span> <span class="mi">5</span><span class="p">.</span><span class="mi">0</span> <span class="p">(</span><span class="mi">0</span><span class="n">x9</span><span class="p">)</span>  <span class="n">Revision</span><span class="p">:</span> <span class="mi">0</span><span class="n">x13b</span>
+        <span class="n">LMP</span> <span class="k">Version</span><span class="p">:</span> <span class="mi">5</span><span class="p">.</span><span class="mi">0</span> <span class="p">(</span><span class="mi">0</span><span class="n">x9</span><span class="p">)</span>  <span class="n">Subversion</span><span class="p">:</span> <span class="mi">0</span><span class="n">x6119</span>
+        <span class="n">Manufacturer</span><span class="p">:</span> <span class="n">Cypress</span> <span class="n">Semiconductor</span> <span class="n">Corporation</span> <span class="p">(</span><span class="mi">305</span><span class="p">)</span>
+</code></pre></div>
+	</div>
+
+
+			<hr>
+		</article>
+
+		<footer>
+			<p>Copyright Drew Bednar 2020<br> Powered by <a href="http://getpelican.com">Pelican</a>.</p>
+		</footer>
+	</div>
+
+
+</body>
+</html>
