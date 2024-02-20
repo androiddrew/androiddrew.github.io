@@ -1,11 +1,264 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Androiddrew</title><link href="https://androiddrew.github.io/" rel="alternate"></link><link href="https://androiddrew.github.io/feeds/all.atom.xml" rel="self"></link><id>https://androiddrew.github.io/</id><updated>2024-02-16T00:00:00-05:00</updated><entry><title>Learning Observability Part 1</title><link href="https://androiddrew.github.io/2024/02/learning-observability-part-1/" rel="alternate"></link><published>2024-02-16T00:00:00-05:00</published><updated>2024-02-16T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2024-02-16:/2024/02/learning-observability-part-1/</id><summary type="html">&lt;p&gt;I am going on a trip down the observability lane. Recently at work, we decided to adopt &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; to provide observability to our new services. In this series, I will dive right into setting up not only OpenTelemetry in an application, but …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I am going on a trip down the observability lane. Recently at work, we decided to adopt &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; to provide observability to our new services. In this series, I will dive right into setting up not only OpenTelemetry in an application, but the infrastructure necessary to observe the logs, metrics, and traces it produces. &lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Androiddrew</title><link href="https://androiddrew.github.io/" rel="alternate"></link><link href="https://androiddrew.github.io/feeds/all.atom.xml" rel="self"></link><id>https://androiddrew.github.io/</id><updated>2024-02-18T00:00:00-05:00</updated><entry><title>Learning Observability Part 2</title><link href="https://androiddrew.github.io/2024/02/learning-observability-part-2/" rel="alternate"></link><published>2024-02-18T00:00:00-05:00</published><updated>2024-02-18T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2024-02-18:/2024/02/learning-observability-part-2/</id><summary type="html">&lt;p&gt;We move on from the why in &lt;a href="https://androiddrew.github.io/2024/02/learning-observability-part-1/"&gt;learning-observability-part-1&lt;/a&gt; to the how in this entry by using docker-compose to deploy a single node Elastic and Kibana service to the lab. &lt;/p&gt;
+&lt;h2&gt;What and where are we deploying?&lt;/h2&gt;
+&lt;p&gt;As mentioned in the first entry of …&lt;/p&gt;</summary><content type="html">&lt;p&gt;We move on from the why in &lt;a href="https://androiddrew.github.io/2024/02/learning-observability-part-1/"&gt;learning-observability-part-1&lt;/a&gt; to the how in this entry by using docker-compose to deploy a single node Elastic and Kibana service to the lab. &lt;/p&gt;
+&lt;h2&gt;What and where are we deploying?&lt;/h2&gt;
+&lt;p&gt;As mentioned in the first entry of this series, &lt;a href="https://www.elastic.co/"&gt;Elastic and Kibana&lt;/a&gt; will be serving as the logging infrastructure to our &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; observability stack. Elastic can be a little resource intensive, but as long as we have 2 CPU cores, 4-8 GB of RAM, and 50-ish GB of disk we can have a decent lab setup. I am fortunate enough to have a spare 2011 Dell Optiplex 7010 with a 4-core Intel7 (with hyper threading), 32 GB of RAM ( DDR3-1600 so “not fast” by today’s standards), and a 500 GB SSD, which I will be using for this setup. These are cheap to get parts for, and you can usually find them in liquidation auctions or university surplus stores. Their price coupled with the low power consumption of 250 Watts, makes them a great lab machine.&lt;/p&gt;
+&lt;h2&gt;The install&lt;/h2&gt;
+&lt;p&gt;To begin, I installed the latest &lt;a href="https://releases.ubuntu.com/releases/22.04.3/"&gt;Ubuntu LTS release (22.04.3 aka Jammy Jellyfish)&lt;/a&gt; to serve as the host OS. I use &lt;a href="https://docs.ansible.com/ansible/latest/index.html"&gt;Ansible&lt;/a&gt; to manage all of the machines in my lab, so I am going to skip the setup of Docker and other system dependencies since I automated it a long time again. &lt;/p&gt;
+&lt;p&gt;I am certain that there are more effective docker-compose setups for a single-node Elastic/Kibana, but with the kids, I am always short on time. I am simply going to reference the &lt;a href="https://www.elastic.co/blog/getting-started-with-the-elastic-stack-and-docker-compose"&gt;official Elastic blog&lt;/a&gt; with some minor modifications.&lt;/p&gt;
+&lt;p&gt;First, we need to set up some environment variables.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ELASTIC_PASSWORD&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;changeme
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;KIBANA_PASSWORD&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;changeme
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;HOST_NAME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;docker1.runcible.io
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;STACK_VERSION&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;8.7.1&amp;quot;&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;LICENSE&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;basic
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ES_MEM_LIMIT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;8096000000&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;KB_MEM_LIMIT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;2048000000&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;KIBANA_PORT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;5601&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ES_PORT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;9200&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;COMPOSE_PROJECT_NAME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;elasticlab
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;CLUSTER_NAME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;docker-cluster
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ENCRYPTION_KEY&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="k"&gt;$(&lt;/span&gt;python3&lt;span class="w"&gt; &lt;/span&gt;-c&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;import secrets;print(secrets.token_urlsafe(32))&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;|&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;tee&lt;span class="w"&gt; &lt;/span&gt;xpack_encryption_key.txt&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Note if you reviewed the Elastic blog post above, I have removed Logstash, Filebeat, and Metricsbeat from this setup since we will be using the Opentelemetry collector. I've also copied the &lt;code&gt;ENCRYPTION_KEY&lt;/code&gt; to a clear text file for later use. Once again, I don't care about security since this is just a lab. You do what you want. I've also added my machine's &lt;code&gt;HOST_NAME&lt;/code&gt; which will be included in the cert, allowing me to use the CA that is generated in curl commands to the Elastic API using the hostname.  &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# docker-compose-elastic.yaml&lt;/span&gt;
+&lt;span class="nt"&gt;version&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;3.8&amp;quot;&lt;/span&gt;
+
+&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;certs&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;driver&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;local&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;esdata01&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;driver&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;local&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;kibanadata&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;driver&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;local&lt;/span&gt;
+
+&lt;span class="nt"&gt;networks&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;default&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;elastic&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;external&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;false&lt;/span&gt;
+
+&lt;span class="nt"&gt;services&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;setup&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;certs:/usr/share/elasticsearch/config/certs&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;user&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;0&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;command&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p p-Indicator"&gt;&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="no"&gt;bash -c &amp;#39;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;if [ x${ELASTIC_PASSWORD} == x ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Set the ELASTIC_PASSWORD environment variable in the .env file&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;exit 1;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;elif [ x${KIBANA_PASSWORD} == x ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Set the KIBANA_PASSWORD environment variable in the .env file&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;exit 1;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;fi;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;if [ ! -f config/certs/ca.zip ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Creating CA&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;unzip config/certs/ca.zip -d config/certs;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;fi;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;if [ ! -f config/certs/certs.zip ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Creating certs&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo -ne \&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;instances:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;  - name: es01\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    dns:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - es01\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - localhost\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_NAME}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    ip:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - 127.0.0.1\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - 0.0.0.0\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_IP}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;  - name: kibana\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    dns:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - kibana\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - localhost\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_NAME}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    ip:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - 127.0.0.1\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_IP}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;gt; config/certs/instances.yml;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;unzip config/certs/certs.zip -d config/certs;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;fi;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Setting file permissions&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;chown -R root:root config/certs;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;find . -type d -exec chmod 750 \{\} \;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;find . -type f -exec chmod 640 \{\} \;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Waiting for Elasticsearch availability&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q &amp;quot;missing authentication credentials&amp;quot;; do sleep 30; done;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Setting kibana_system password&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;until curl -s -X POST --cacert config/certs/ca/ca.crt -u &amp;quot;elastic:${ELASTIC_PASSWORD}&amp;quot; -H &amp;quot;Content-Type: application/json&amp;quot; https://es01:9200/_security/user/kibana_system/_password -d &amp;quot;{\&amp;quot;password\&amp;quot;:\&amp;quot;${KIBANA_PASSWORD}\&amp;quot;}&amp;quot; | grep -q &amp;quot;^{}&amp;quot;; do sleep 10; done;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;All done!&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="no"&gt;&amp;#39;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;healthcheck&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;test&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p p-Indicator"&gt;[&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;CMD-SHELL&amp;quot;&lt;/span&gt;&lt;span class="p p-Indicator"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;[&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-f&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;config/certs/es01/es01.crt&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;]&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;interval&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;1s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;timeout&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;5s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;retries&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;120&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;es01&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;depends_on&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;setup&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;condition&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;service_healthy&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;labels&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;co.elastic.logs/module&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;elasticsearch&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;certs:/usr/share/elasticsearch/config/certs&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;esdata01:/usr/share/elasticsearch/data&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;ports&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${ES_PORT}:9200&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;environment&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;node.name=es01&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;cluster.name=${CLUSTER_NAME}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;discovery.type=single-node&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTIC_PASSWORD=${ELASTIC_PASSWORD}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;bootstrap.memory_lock=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.enabled=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.enabled=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.key=certs/es01/es01.key&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.certificate=certs/es01/es01.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.enabled=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.key=certs/es01/es01.key&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.certificate=certs/es01/es01.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.verification_mode=certificate&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.license.self_generated.type=${LICENSE}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;mem_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${ES_MEM_LIMIT}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;ulimits&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;memlock&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;soft&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;-1&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;hard&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;-1&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;healthcheck&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;test&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;[&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;CMD-SHELL&amp;quot;&lt;/span&gt;&lt;span class="p p-Indicator"&gt;,&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;curl&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-s&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;--cacert&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;config/certs/ca/ca.crt&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;https://localhost:9200&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;|&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;grep&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-q&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#39;missing&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;authentication&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;credentials&amp;#39;&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;interval&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;timeout&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;retries&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;120&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;kibana&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;depends_on&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;es01&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;condition&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;service_healthy&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;docker.elastic.co/kibana/kibana:${STACK_VERSION}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;labels&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;co.elastic.logs/module&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;kibana&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;certs:/usr/share/kibana/config/certs&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;kibanadata:/usr/share/kibana/data&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;ports&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${KIBANA_PORT}:5601&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;environment&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;SERVERNAME=kibana&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_HOSTS=https://es01:9200&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_USERNAME=kibana_system&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;mem_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${KB_MEM_LIMIT}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;healthcheck&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;test&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;[&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;CMD-SHELL&amp;quot;&lt;/span&gt;&lt;span class="p p-Indicator"&gt;,&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;curl&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-s&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-I&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;http://localhost:5601&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;|&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;grep&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-q&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#39;HTTP/1.1&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;302&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;Found&amp;#39;&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;interval&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;timeout&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;retries&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;120&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Let's spin this up.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;docker-compose&lt;span class="w"&gt; &lt;/span&gt;-f&lt;span class="w"&gt; &lt;/span&gt;docker-compose-elastic.yaml&lt;span class="w"&gt; &lt;/span&gt;up&lt;span class="w"&gt; &lt;/span&gt;-d
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;You should now have an instance of Kibana hosted on port 5601 of your machine.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="elastic-login" src="https://androiddrew.github.io/images/elastic-login.png"&gt;&lt;/p&gt;
+&lt;p&gt;Next we will create a Index Lifecycle Management Policy. There could be a lot of optimization you can do here in the process of moving data between phases to deletion. For this setup, we are going with a simple 30-day retainment policy all on "hot" storage, which is fine because we don't have a multinode setup. &lt;/p&gt;
+&lt;p&gt;I find it easiest to use the Dev Tools for this, but you could also choose to use the ReST API. Go to Menu &amp;gt; Management &amp;gt; Dev Tools, enter the following policy object (adjusted to your needs), and submit it.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PUT _ilm/policy/otel_daily_rollover_policy
+{
+  &amp;quot;policy&amp;quot;: {
+    &amp;quot;phases&amp;quot;: {
+      &amp;quot;hot&amp;quot;: {
+        &amp;quot;actions&amp;quot;: {
+          &amp;quot;rollover&amp;quot;: {
+            &amp;quot;max_age&amp;quot;: &amp;quot;1d&amp;quot;
+          }
+        }
+      },
+      &amp;quot;delete&amp;quot;: {
+        &amp;quot;min_age&amp;quot;: &amp;quot;30d&amp;quot;,
+        &amp;quot;actions&amp;quot;: {
+          &amp;quot;delete&amp;quot;: {}
+        }
+      }
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;For any of the API requests we make, you should receive a 200 - OK response containing:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;acknowledged&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Now we want to create an &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-templates.html"&gt;index template&lt;/a&gt;. Since this is a single-node cluster we are just going to specify shards and replicas as 1. We will apply our &lt;code&gt;otel_daily_rollover_policy&lt;/code&gt;, and include an alais for rollover. This alais "otel-logs-lab" will make it easier for us in our OTEL collector to specify one index to ship events to, and Elastic will store them in the active index for us.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PUT _index_template/otel_logs_template
+{
+  &amp;quot;index_patterns&amp;quot;: [&amp;quot;otel-logs-lab-*&amp;quot;],  
+  &amp;quot;template&amp;quot;: {
+    &amp;quot;settings&amp;quot;: {
+      &amp;quot;number_of_shards&amp;quot;: 1,
+      &amp;quot;number_of_replicas&amp;quot;: 1,
+      &amp;quot;index.lifecycle.name&amp;quot;: &amp;quot;otel_daily_rollover_policy&amp;quot;,  
+      &amp;quot;index.lifecycle.rollover_alias&amp;quot;: &amp;quot;otel-logs-lab&amp;quot;  
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Before accepting any documents from our collector we have to create the first "active" index. Here I am using support for &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#api-date-math-index-names"&gt;date math in index names&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PUT /%3Cotel-logs-lab-%7Bnow%2Fd%7D%3E
+{
+  &amp;quot;aliases&amp;quot;: {
+    &amp;quot;otel-logs-lab&amp;quot;: {
+      &amp;quot;is_write_index&amp;quot;: true
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Our last task is to create a Data View that will cover all the indexes for our OTEL logs. Open up &lt;code&gt;Discover&lt;/code&gt; and then open the data view menu. Select "create a data view". &lt;/p&gt;
+&lt;p&gt;&lt;img alt="create-data-view" src="https://androiddrew.github.io/images/create-data-view.png"&gt;&lt;/p&gt;
+&lt;p&gt;Now create a view with a name and the index pattern &lt;code&gt;otel-logs-lab-*&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="otel-data-view" src="https://androiddrew.github.io/images/otel-data-view.png"&gt;&lt;/p&gt;
+&lt;p&gt;With this in place we are now ready to receive logging data from an OTEL Collector.&lt;/p&gt;
+&lt;h2&gt;Up next&lt;/h2&gt;
+&lt;p&gt;The next entry in this series will cover adding the OTEL Collector to a Kubernetes cluster to export logs to our new Elastic infrastructure.&lt;/p&gt;</content><category term="observability"></category><category term="otel"></category><category term="opentelemetry"></category><category term="elastic"></category><category term="kibana"></category></entry><entry><title>Learning Observability Part 1</title><link href="https://androiddrew.github.io/2024/02/learning-observability-part-1/" rel="alternate"></link><published>2024-02-16T00:00:00-05:00</published><updated>2024-02-16T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2024-02-16:/2024/02/learning-observability-part-1/</id><summary type="html">&lt;p&gt;I am going on a trip down the observability lane. Recently at work, we decided to adopt &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; to provide observability to our new services. In this series, I will dive right into setting up not only OpenTelemetry in an application, but …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I am going on a trip down the observability lane. Recently at work, we decided to adopt &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; to provide observability to our new services. In this series, I will dive right into setting up not only OpenTelemetry in an application, but the infrastructure necessary to observe the logs, metrics, and traces it produces. &lt;/p&gt;
 &lt;h2&gt;Who is this for?&lt;/h2&gt;
 &lt;p&gt;This is for me, but please read along and you might learn something. If you have no idea what &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; is though I suggest you start with their own documentation or a YouTube presentation on the concepts. &lt;/p&gt;
 &lt;p&gt;These articles are for me to put into practice the concepts I am learning along the way and to document what I did for my future self when I come back to the lab and find Elastic, Jaeger, Prometheus, Grafana, and the OTEL collector deployed. &lt;/p&gt;
 &lt;h2&gt;What are we aiming for?&lt;/h2&gt;
 &lt;p&gt;Even though the lab is composed of some beefy servers, it still has resource constraints. Any of the infrastructure I deploy will not be high availability, use best practices, or even appropriate security. It's simply a lab environment where I plan to practice the plumbing necessary to get the whole end-to-end setup rolling. &lt;/p&gt;
-&lt;p&gt;While I know services like &lt;a href="https://www.elastic.co/observability/application-performance-monitoring"&gt;Elastic has a full Application Performance Monitoring solution&lt;/a&gt; I plan to simply use it with Kibana for logging and as a database repository for the traces. For trace analysis, I will be using &lt;a href="https://www.jaegertracing.io/"&gt;Jaeger&lt;/a&gt;. For metrics, I have zero experience with &lt;a href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; so I think it's a great opportunity to set up an OTEL collector exporter there. While I use &lt;a href="https://grafana.com/"&gt;Grafana&lt;/a&gt; dashboards at work, I have never had to set one up. So, Grafana will be used for metrics dashboards and alerts. Lastly, a simple Python Flask application should suffice for practicing manual instrumentation with the OTEL SDKs. &lt;/p&gt;
+&lt;p&gt;While I know services like &lt;a href="https://www.elastic.co/observability/application-performance-monitoring"&gt;Elastic have a full Application Performance Monitoring solution&lt;/a&gt; I plan to simply use it with Kibana for logging and as a database repository for  traces. For trace analysis, I will be using &lt;a href="https://www.jaegertracing.io/"&gt;Jaeger&lt;/a&gt;. For metrics, I have zero experience with &lt;a href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; so I think it's a great opportunity to set up an OTEL collector exporter there. While I use &lt;a href="https://grafana.com/"&gt;Grafana&lt;/a&gt; dashboards at work, I have never had to set one up. So, Grafana will be used for metrics dashboards and alerts. Lastly, a simple Python Flask application should suffice for practicing manual instrumentation with the OTEL SDKs. &lt;/p&gt;
 &lt;p&gt;If all works as expected I think a stretch goal will be to deploy the &lt;a href="https://github.com/open-telemetry/opentelemetry-demo"&gt;OpenTelemetry Demo&lt;/a&gt; which contains a fully instrumented microservices implementation of an Astronomy Shop.&lt;/p&gt;
 &lt;h2&gt;Up next&lt;/h2&gt;
 &lt;p&gt;The next entry in this series will start with a simple single-node Elastic and Kibana deployment. It will include setting up an index for OTEL logs, with an index lifecycle management policy for rolling over the index daily.&lt;/p&gt;</content><category term="observability"></category><category term="python"></category><category term="otel"></category><category term="opentelemetry"></category><category term="elastic"></category></entry><entry><title>Kubernetes Cert Renewal</title><link href="https://androiddrew.github.io/2022/10/kubernetes-cert-renewal/" rel="alternate"></link><published>2022-10-17T00:00:00-04:00</published><updated>2022-10-17T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2022-10-17:/2022/10/kubernetes-cert-renewal/</id><summary type="html">&lt;p&gt;Here in the lab is an old Kubernetes 1.19 cluster that I haven't checked on in a while. I lost access to the 
