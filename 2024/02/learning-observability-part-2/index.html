@@ -292,7 +292,7 @@
 
 <p>You should now have an instance of Kibana hosted on port 5601 of your machine.</p>
 <p><img alt="elastic-login" src="https://androiddrew.github.io/images/elastic-login.png"></p>
-<p>Next we will create a Index Lifecycle Management Policy. There could be a lot of optimization you can do here in the process of moving data between phases to deletion. For this setup, we are going with a simple 30-day retainment policy all on "hot" storage, which is fine because we don't have a multinode setup. </p>
+<p>Next we will create a <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-lifecycle-management-api.html">Index Lifecycle Management Policy</a>. There could be a lot of optimization you can do here in the process of moving data between phases to deletion. For this setup, we are going with a simple 30-day retainment policy all on "hot" storage, which is fine because we don't have a multinode setup. </p>
 <p>I find it easiest to use the Dev Tools for this, but you could also choose to use the ReST API. Go to Menu &gt; Management &gt; Dev Tools, enter the following policy object (adjusted to your needs), and submit it.</p>
 <div class="codehilite"><pre><span></span><code>PUT _ilm/policy/otel_daily_rollover_policy
 {
@@ -352,7 +352,7 @@
 </code></pre></div>
 
 
-<p>Our last task is to create a Data View that will cover all the indexes for our OTEL logs. Open up <code>Discover</code> and then open the data view menu. Select "create a data view". </p>
+<p>Our last task is to create a Data View that will cover all the indexes for our OTEL logs. Open up <code>Discover</code> and then open the data view menu. Select "Create a data view". </p>
 <p><img alt="create-data-view" src="https://androiddrew.github.io/images/create-data-view.png"></p>
 <p>Now create a view with a name and the index pattern <code>otel-logs-lab-*</code>.</p>
 <p><img alt="otel-data-view" src="https://androiddrew.github.io/images/otel-data-view.png"></p>

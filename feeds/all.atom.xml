@@ -186,7 +186,7 @@
 
 &lt;p&gt;You should now have an instance of Kibana hosted on port 5601 of your machine.&lt;/p&gt;
 &lt;p&gt;&lt;img alt="elastic-login" src="https://androiddrew.github.io/images/elastic-login.png"&gt;&lt;/p&gt;
-&lt;p&gt;Next we will create a Index Lifecycle Management Policy. There could be a lot of optimization you can do here in the process of moving data between phases to deletion. For this setup, we are going with a simple 30-day retainment policy all on "hot" storage, which is fine because we don't have a multinode setup. &lt;/p&gt;
+&lt;p&gt;Next we will create a &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-lifecycle-management-api.html"&gt;Index Lifecycle Management Policy&lt;/a&gt;. There could be a lot of optimization you can do here in the process of moving data between phases to deletion. For this setup, we are going with a simple 30-day retainment policy all on "hot" storage, which is fine because we don't have a multinode setup. &lt;/p&gt;
 &lt;p&gt;I find it easiest to use the Dev Tools for this, but you could also choose to use the ReST API. Go to Menu &amp;gt; Management &amp;gt; Dev Tools, enter the following policy object (adjusted to your needs), and submit it.&lt;/p&gt;
 &lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PUT _ilm/policy/otel_daily_rollover_policy
 {
@@ -246,7 +246,7 @@
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;Our last task is to create a Data View that will cover all the indexes for our OTEL logs. Open up &lt;code&gt;Discover&lt;/code&gt; and then open the data view menu. Select "create a data view". &lt;/p&gt;
+&lt;p&gt;Our last task is to create a Data View that will cover all the indexes for our OTEL logs. Open up &lt;code&gt;Discover&lt;/code&gt; and then open the data view menu. Select "Create a data view". &lt;/p&gt;
 &lt;p&gt;&lt;img alt="create-data-view" src="https://androiddrew.github.io/images/create-data-view.png"&gt;&lt;/p&gt;
 &lt;p&gt;Now create a view with a name and the index pattern &lt;code&gt;otel-logs-lab-*&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;img alt="otel-data-view" src="https://androiddrew.github.io/images/otel-data-view.png"&gt;&lt;/p&gt;
