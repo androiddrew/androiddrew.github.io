@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+        <title>Build Micropython for the Teensy 4.0/4.1</title>
+
+            <link href="https://androiddrew.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Androiddrew Full Atom Feed" />
+        <!-- Custom CSS -->
+        <link href="https://androiddrew.github.io/theme/css/ruckenwind.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://androiddrew.github.io/theme/css/code_blocks/monokai.css" rel="stylesheet">
+
+
+        <!-- Custom Fonts -->
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+
+
+        <meta name="description" content="Micropython on the Teensy! Finally, some minimal support for the Teensy 4.x processor was added in the 1.16 version of Micropython....">
+
+        <meta name="author" content="Drew Bednar">
+
+        <meta name="tags" content="microcontroller">
+        <meta name="tags" content="micropython">
+        <meta name="tags" content="teensy">
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="Androiddrew">
+
+	<meta property="og:type" content="article">
+            <meta property="article:author" content="https://androiddrew.github.io/author/drew-bednar.html">
+	<meta property="og:url" content="https://androiddrew.github.io/2021/07/build-micropython-for-teensy-4x/">
+	<meta property="og:title" content="Build Micropython for the Teensy 4.0/4.1">
+	<meta property="article:published_time" content="2021-07-19 00:00:00-04:00">
+            <meta property="og:description" content="Micropython on the Teensy! Finally, some minimal support for the Teensy 4.x processor was added in the 1.16 version of Micropython....">
+
+            <meta property="og:image" content="https://androiddrew.github.io/theme/img/post-bg.jpg">
+    <link rel="icon" href="/icons/favicon-32x32.png">
+</head>
+
+<body class="bg-gray-50 text-xl">
+    <header>
+      <div class="relative">
+        <div class="absolute inset-0">
+    <!-- Page Header -->
+          <img class="h-full w-full object-cover" src="https://androiddrew.github.io/theme/img/post-bg.jpg" alt="" aria-hidden="true" />
+        </div>
+    <!-- Nav Menu -->
+    <div class="absolute inset-0">
+<nav class="relative mx-auto text-white sticky top-0 z-10">
+  <!-- flex container for alignment. Gives flex row by default. Aligning items in the center. Justifing content with between option -->
+  <div id="navbar" class="flex items-center md:justify-between justify-end">
+      <!-- Logo with padding top 2 -->
+      <!-- Menu items -->
+      <!-- flex again for alignment but disappear on sm screens -->
+      <!-- So on md: flex  -->
+      <div class="hidden md:block">
+        <a class="p-6 text-xl font-extrabold hover:text-gray-400 duration-300 tracking-normal" href="https://androiddrew.github.io/">Androiddrew</a>
+      </div>
+      <div class="hidden md:flex">
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+      <!-- Button -->
+      <!-- Hidden on smaller screens but on md(and up) display as block -->
+  <!-- Hamburger Icon -->
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+      <span class="hamburger-top"></span>
+      <span class="hamburger-middle"></span>
+      <span class="hamburger-bottom"></span>
+  </button>
+  </div>
+  <!-- Mobile Menu -->
+  <div class="md:hidden">
+      <!-- Because it is being placed in the relative div above. -->
+      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="underline px-4 py-2 uppercase  font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+  </div>
+</nav>      </div>
+    <!-- End Nav Menu -->
+        <div class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
+          <h1 class="text-5xl md:text-7xl lg:text-7xl font-extrabold tracking-normal text-white align-middle">
+            Build Micropython for the Teensy 4.0/4.1
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="text-gray-900">
+      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
+        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
+      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
+          <div class="mx-4">  -->
+    <!-- Post Content -->
+    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+        <p class="italic text-lg text-gray-500 mt-6">
+            Posted by 
+            <a class="text-gray-800 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/author/drew-bednar.html">Drew Bednar</a>
+            on July 19, 2021
+            <br>
+            Tags: <a class="text-gray-800 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/tag/microcontroller.html">microcontroller</a>, <a class="text-gray-800 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/tag/micropython.html">micropython</a>, <a class="text-gray-800 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/tag/teensy.html">teensy</a>        </p>
+        <h2>Micropython on the Teensy!</h2>
+<p>Finally, some minimal support for the Teensy 4.x processor was added in the 1.16 version of Micropython. Daily binaries 
+are provided at <a href="https://micropython.org/download/all/">https://micropython.org/download/all/</a>, but these won't contain 
+features under construction. This article will show you how to compile the 
+<a href="https://github.com/micropython/micropython/tree/master/ports/mimxrt">mimxrt port</a> from source, and will be useful for 
+those who want to experiment with other people's branches or attempt to implement a feature themselves. </p>
+<h2>Setting up the dependencies</h2>
+<p>These instructions were performed using a fresh install of Ubuntu 20.04 Focal-fossa.</p>
+<p>Clone the Micropython repo.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">git clone https://github.com/micropython/micropython.git</span>
+<span class="err">cd micropython</span>
+</code></pre></div>
+
+
+<p>Ensure core micropython dependencies are installed on your system.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">sudo apt-get install build-essential libffi-dev git pkg-config</span>
+</code></pre></div>
+
+
+<h3>Installing the ARM Developer Toolchain</h3>
+<p>Since the Teensy is an ARM processor we will need to install the GNU Arm Embedded Toolchain.</p>
+<h4>The easier way</h4>
+<p>There are some older packages you can still install from the package archives, but recent tools will have to come from 
+the toolchain maintainer’s website. See the next section for manual install instructions.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">sudo apt install libnewlib-arm-none-eabi binutils-arm-none-eabi gcc-arm-none-eabi</span>
+</code></pre></div>
+
+
+<h4>The new "harder" way</h4>
+<p>There is no maintained PPA anymore for the ARM embedded toolchain, you have to install it manually from the
+<a href="https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads">Arm Developer website</a>. The binaries provided by the three older packages listed above were all present in the bin 
+directory of the provided archive. </p>
+<p>Download the latest Linux x86_64 tarball, check the md5, and untar into a directory. You can add that directory to 
+your PATH and be done, or you can do something like below.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">sudo tar xjf &lt;your tarball&gt; -C /usr/share/ </span>
+</code></pre></div>
+
+
+<p>Create symlinks for all the binaries to make them accessible system-wide.</p>
+<div class="codehilite"><pre><span></span><code>GCC_ARM_VERSION = <span class="nt">&lt;gcc</span><span class="err">-arm-none-eabi-your-version</span><span class="nt">&gt;</span>
+
+sudo ln -s /usr/share/<span class="cp">${</span><span class="n">GCC_ARM_VERSION</span><span class="cp">}</span>/bin/arm-none-eabi-gcc /usr/bin/arm-none-eabi-gcc 
+sudo ln -s /usr/share/<span class="cp">${</span><span class="n">GCC_ARM_VERSION</span><span class="cp">}</span>/bin/arm-none-eabi-g++ /usr/bin/arm-none-eabi-g++
+sudo ln -s /usr/share/<span class="cp">${</span><span class="n">GCC_ARM_VERSION</span><span class="cp">}</span>/bin/arm-none-eabi-gdb /usr/bin/arm-none-eabi-gdb
+sudo ln -s /usr/share/<span class="cp">${</span><span class="n">GCC_ARM_VERSION</span><span class="cp">}</span>/bin/arm-none-eabi-size /usr/bin/arm-none-eabi-size
+...
+</code></pre></div>
+
+
+<p>There may be some dependencies missing after install. If you encounter issues this should resolve them.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">sudo apt install libncurses-dev</span>
+<span class="err">sudo ln -s /usr/lib/x86_64-linux-gnu/libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5</span>
+<span class="err">sudo ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5</span>
+</code></pre></div>
+
+
+<p>With that, the following commands should now work.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">arm-none-eabi-gcc --version</span>
+<span class="err">arm-none-eabi-g++ --version</span>
+<span class="err">arm-none-eabi-gdb --version</span>
+<span class="err">arm-none-eabi-size --version</span>
+<span class="err">...</span>
+</code></pre></div>
+
+
+<h3>Build the Micropython cross-compiler</h3>
+<p>From the micropython top-level directory.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">cd mpy-cross</span>
+<span class="err">make</span>
+</code></pre></div>
+
+
+<p>We are now ready to build.</p>
+<h2>Building the Teensy port</h2>
+<p>Back at the micropython top-level directory, head over to the mimxrt port and run the make magic.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">cd ./ports/mimxrt/</span>
+<span class="err">make submodules</span>
+<span class="err">make</span>
+</code></pre></div>
+
+
+<p>If it succeeds you should see something like this:</p>
+<div class="codehilite"><pre><span></span><code><span class="err">LINK build-TEENSY40/firmware.elf</span>
+<span class="err">Memory region         Used Size  Region Size  %age Used</span>
+<span class="err">  m_flash_config:         512 B         4 KB     12.50%</span>
+<span class="err">           m_ivt:          48 B         4 KB      1.17%</span>
+<span class="err">    m_interrupts:          1 KB         1 KB    100.00%</span>
+<span class="err">          m_text:      266424 B      1015 KB     25.63%</span>
+<span class="err">           m_vfs:          0 GB      1020 KB      0.00%</span>
+<span class="err">      m_reserved:          0 GB         4 KB      0.00%</span>
+<span class="err">          m_itcm:        1872 B       128 KB      1.43%</span>
+<span class="err">          m_dtcm:       42952 B       128 KB     32.77%</span>
+<span class="err">          m_ocrm:          0 GB       768 KB      0.00%</span>
+<span class="err">   text    data     bss     dec     hex filename</span>
+<span class="err"> 269880     292   40904  311076   4bf24 build-TEENSY40/firmware.elf</span>
+</code></pre></div>
+
+
+<h2>Flashing your sweet new binary</h2>
+<p>We can use the <a href="https://github.com/PaulStoffregen/teensy_loader_cli">teensy_loader_cli</a> tool to upload our .hex file to 
+our Teensy 4.x board.</p>
+<p>First, let's install its dependencies.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">sudo apt install libusb-dev</span>
+</code></pre></div>
+
+
+<p>Clone the teensy_loader_cli repo to a workspace, build, and copy the binary somewhere in your path.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">git clone https://github.com/PaulStoffregen/teensy_loader_cli.git</span>
+<span class="err">cd teensy_loader_cli</span>
+<span class="err">make </span>
+<span class="err">sudo cp teensy_loader_cli /usr/local/bin</span>
+</code></pre></div>
+
+
+<p>Check to make sure it works and supports our target board.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">teensy_loader_cli --list-mcus </span>
+</code></pre></div>
+
+
+<p>To avoid having to use sudo to flash a teensy we can update our udev rules.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">cd ~</span>
+<span class="err">wget https://www.pjrc.com/teensy/00-teensy.rules</span>
+<span class="err">sudo cp 00-teensy.rules /etc/udev/rules.d/</span>
+<span class="err">sudo udevadm control --reload-rules</span>
+</code></pre></div>
+
+
+<p>Finally! We can flash the board. Go back to your build folder.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">cd micropython/ports/mimxrt/build-TEENSY40</span>
+</code></pre></div>
+
+
+<p>Kick off the teensy loader. The <code>-w</code> flag will wait for a teensy in bootloader mode to connect.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">teensy_loader_cli --mcu=TEENSY40 -w firmware.hex</span>
+</code></pre></div>
+
+
+<p>Now press the button on the teensy. Once it's done loading we can use a program like minicom to connect to the REPL.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">minicom -D /dev/ttyACM0 -b 115200</span>
+</code></pre></div>
+
+
+<p>Excellent, let's go for a Hello world:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">utime</span>
+<span class="kn">from</span> <span class="nn">machine</span> <span class="kn">import</span> <span class="n">Pin</span>
+
+<span class="n">p13</span> <span class="o">=</span> <span class="n">Pin</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="n">Pin</span><span class="o">.</span><span class="n">OUT</span><span class="p">)</span>
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="n">p13</span><span class="o">.</span><span class="n">on</span><span class="p">()</span>
+    <span class="n">utime</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">p13</span><span class="o">.</span><span class="n">off</span><span class="p">()</span>
+    <span class="n">utime</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p>You should now see the onboard LED blinking on you board! Alright, but we aren't done yet. We have to upload code to 
+our board. Personally, I prefer a cli tool and the <code>ampy</code> program foot's the bill. In a python virtualenv let's 
+install <code>ampy</code>, copy our blinking code into a <code>main.py</code>, then upload it to the Teensy.</p>
+<div class="codehilite"><pre><span></span><code><span class="err">python3 -m venv env</span>
+<span class="err">source env/bin/activate</span>
+<span class="err">pip install adafruit-ampy</span>
+<span class="err"># Copy your code to a main.py file</span>
+<span class="err">ampy -p /dev/ttyACM0 -b 115200 put main.py</span>
+<span class="err">ampy -p /dev/ttyACM0 -b 115200 ls</span>
+</code></pre></div>
+
+
+<p>Now reset your board.</p>
+<h2>In closing</h2>
+<p>We have done the whole round trip on this one. We have built a micropython port from source, flashed it to our teensy 
+board, confirmed it was working with a blinky program in the REPL, then uploaded a <code>main.py</code> file so it will always 
+blink when powered. The world is now yours. Go forth and do great things.</p>
+<h2>Resources</h2>
+<ul>
+<li><a href="https://docs.micropython.org/en/latest/develop/gettingstarted.html">Micropython Getting Started</a></li>
+<li><a href="https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads">Arm Developer website</a></li>
+<li><a href="https://learn.sparkfun.com/tutorials/how-to-load-micropython-on-a-microcontroller-board/teensy-3x">How to Load MicroPython on a Microcontroller Board</a></li>
+<li>https://askubuntu.com/questions/1243252/how-to-install-arm-none-eabi-gdb-on-ubuntu-20-04-lts-focal-fossa</li>
+</ul>
+            <p class="italic text-lg text-gray-500 mt-6">Tags: <a class="text-gray-800 hover:text-indigo-500 underline duration-500" href="https://androiddrew.github.io/tag/microcontroller.html">microcontroller</a>, <a class="text-gray-800 hover:text-indigo-500 underline duration-500" href="https://androiddrew.github.io/tag/micropython.html">micropython</a>, <a class="text-gray-800 hover:text-indigo-500 underline duration-500" href="https://androiddrew.github.io/tag/teensy.html">teensy</a></p>
+    </article>
+
+
+        </div>
+      </div>
+    </main>
+    <!-- End Main Content -->
+    <hr class="mt-12" />
+    <!-- Footer -->
+<footer>
+    <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div class="mt-8 flex justify-center space-x-6">
+      </div>
+      <p class="mt-8 text-center text-base text-gray-400">
+        &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
+      </p>
+    </div>
+  </footer>
+    <!-- End Footer -->
+    <!-- Custom Theme JavaScript -->
+    <script src="https://androiddrew.github.io/theme/js/ruckenwind.js"></script>
+ 
+    
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'G-Q1PJ9PSLM4', 'auto');
+    ga('send', 'pageview');
+</script>
+
+  </body>
+</html>
