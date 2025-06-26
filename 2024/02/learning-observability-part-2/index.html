@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+        <title>Learning Observability Part 2</title>
+
+            <link href="https://androiddrew.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Androiddrew Full Atom Feed" />
+        <!-- Custom CSS -->
+        <link href="https://androiddrew.github.io/theme/css/ruckenwind.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://androiddrew.github.io/theme/css/code_blocks/monokai.css" rel="stylesheet">
+
+
+        <!-- Custom Fonts -->
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+
+
+        <meta name="description" content="We move on from the why in learning-observability-part-1 to the how in this entry by using docker-compose to deploy a single node...">
+
+        <meta name="author" content="Drew Bednar">
+
+        <meta name="tags" content="otel">
+        <meta name="tags" content="opentelemetry">
+        <meta name="tags" content="elastic">
+        <meta name="tags" content="kibana">
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="Androiddrew">
+
+	<meta property="og:type" content="article">
+            <meta property="article:author" content="https://androiddrew.github.io/author/drew-bednar.html">
+	<meta property="og:url" content="https://androiddrew.github.io/2024/02/learning-observability-part-2/">
+	<meta property="og:title" content="Learning Observability Part 2">
+	<meta property="article:published_time" content="2024-02-18 00:00:00-05:00">
+            <meta property="og:description" content="We move on from the why in learning-observability-part-1 to the how in this entry by using docker-compose to deploy a single node...">
+
+            <meta property="og:image" content="https://androiddrew.github.ioimages/paper-machine.webp">
+    <link rel="icon" href="/images/icons/favicon-32x32.png">
+</head>
+
+<body class="bg-gray-50 text-xl">
+    <header>
+      <div class="relative">
+        <div class="absolute inset-0">
+    <!-- Page Header -->
+          <img class="h-full w-full object-cover" src="https://androiddrew.github.io/images/paper-machine.webp" alt="" aria-hidden="true" />
+          <div class="h-full absolute inset-0 bg-gray-500 mix-blend-multiply" aria-hidden="true"></div>
+        </div>
+    <!-- Nav Menu -->
+    <div class="absolute inset-0">
+<nav class="relative mx-auto text-white sticky top-0 z-10">
+  <!-- flex container for alignment. Gives flex row by default. Aligning items in the center. Justifing content with between option -->
+  <div id="navbar" class="flex items-center md:justify-between justify-end">
+      <!-- Logo with padding top 2 -->
+      <!-- Menu items -->
+      <!-- flex again for alignment but disappear on sm screens -->
+      <!-- So on md: flex  -->
+      <div class="hidden md:block">
+        <a class="p-6 text-xl font-extrabold hover:text-gray-400 duration-300 tracking-normal" href="https://androiddrew.github.io/">Androiddrew</a>
+      </div>
+      <div class="hidden md:flex">
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+      <!-- Button -->
+      <!-- Hidden on smaller screens but on md(and up) display as block -->
+  <!-- Hamburger Icon -->
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+      <span class="hamburger-top"></span>
+      <span class="hamburger-middle"></span>
+      <span class="hamburger-bottom"></span>
+  </button>
+  </div>
+  <!-- Mobile Menu -->
+  <div class="md:hidden">
+      <!-- Because it is being placed in the relative div above. -->
+      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="underline px-4 py-2 uppercase  font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+  </div>
+</nav>      </div>
+    <!-- End Nav Menu -->
+        <div class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-normal text-white align-middle">
+            Learning Observability Part 2
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="text-gray-900">
+      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
+        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
+      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
+          <div class="mx-4">  -->
+    <!-- Post Content -->
+    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+        <p>We move on from the why in <a href="https://androiddrew.github.io/2024/02/learning-observability-part-1/">learning-observability-part-1</a> to the how in this entry by using docker-compose to deploy a single node Elastic and Kibana service to the lab. </p>
+<h2>What and where are we deploying?</h2>
+<p>As mentioned in the first entry of this series, <a href="https://www.elastic.co/">Elastic and Kibana</a> will be serving as the logging infrastructure to our <a href="https://opentelemetry.io/">OpenTelemetry</a> observability stack. Elastic can be a little resource intensive, but as long as we have 2 CPU cores, 4-8 GB of RAM, and 50-ish GB of disk we can have a decent lab setup. I am fortunate enough to have a spare 2011 Dell Optiplex 7010 with a 4-core Intel7 (with hyper threading), 32 GB of RAM ( DDR3-1600 so “not fast” by today’s standards), and a 500 GB SSD, which I will be using for this setup. These are cheap to get parts for, and you can usually find them in liquidation auctions or university surplus stores. Their price coupled with the low power consumption of 250 Watts, makes them a great lab machine.</p>
+<h2>The install</h2>
+<p>To begin, I installed the latest <a href="https://releases.ubuntu.com/releases/22.04.3/">Ubuntu LTS release (22.04.3 aka Jammy Jellyfish)</a> to serve as the host OS. I use <a href="https://docs.ansible.com/ansible/latest/index.html">Ansible</a> to manage all of the machines in my lab, so I am going to skip the setup of Docker and other system dependencies since I automated it a long time again. </p>
+<p>I am certain that there are more effective docker-compose setups for a single-node Elastic/Kibana, but with the kids, I am always short on time. I am simply going to reference the <a href="https://www.elastic.co/blog/getting-started-with-the-elastic-stack-and-docker-compose">official Elastic blog</a> with some minor modifications.</p>
+<p>First, we need to set up some environment variables.</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">ELASTIC_PASSWORD</span><span class="o">=</span>changeme
+<span class="nb">export</span><span class="w"> </span><span class="nv">KIBANA_PASSWORD</span><span class="o">=</span>changeme
+<span class="nb">export</span><span class="w"> </span><span class="nv">HOST_NAME</span><span class="o">=</span>docker1.runcible.io
+<span class="nb">export</span><span class="w"> </span><span class="nv">STACK_VERSION</span><span class="o">=</span><span class="s2">&quot;8.7.1&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">LICENSE</span><span class="o">=</span>basic
+<span class="nb">export</span><span class="w"> </span><span class="nv">ES_MEM_LIMIT</span><span class="o">=</span><span class="m">8096000000</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">KB_MEM_LIMIT</span><span class="o">=</span><span class="m">2048000000</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">KIBANA_PORT</span><span class="o">=</span><span class="m">5601</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">ES_PORT</span><span class="o">=</span><span class="m">9200</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">COMPOSE_PROJECT_NAME</span><span class="o">=</span>elasticlab
+<span class="nb">export</span><span class="w"> </span><span class="nv">CLUSTER_NAME</span><span class="o">=</span>docker-cluster
+<span class="nb">export</span><span class="w"> </span><span class="nv">ENCRYPTION_KEY</span><span class="o">=</span><span class="k">$(</span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets;print(secrets.token_urlsafe(32))&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>xpack_encryption_key.txt<span class="k">)</span>
+</code></pre></div>
+
+<p>Note if you reviewed the Elastic blog post above, I have removed Logstash, Filebeat, and Metricsbeat from this setup since we will be using the Opentelemetry collector. I've also copied the <code>ENCRYPTION_KEY</code> to a clear text file for later use. Once again, I don't care about security since this is just a lab. You do what you want. I've also added my machine's <code>HOST_NAME</code> which will be included in the cert, allowing me to use the CA that is generated in curl commands to the Elastic API using the hostname.  </p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># docker-compose-elastic.yaml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.8&quot;</span>
+
+<span class="nt">volumes</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">certs</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
+<span class="w">  </span><span class="nt">esdata01</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
+<span class="w">  </span><span class="nt">kibanadata</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">default</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">elastic</span>
+<span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">setup</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">certs:/usr/share/elasticsearch/config/certs</span>
+<span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0&quot;</span>
+<span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">&gt;</span>
+<span class="w">      </span><span class="no">bash -c &#39;</span>
+<span class="w">        </span><span class="no">if [ x${ELASTIC_PASSWORD} == x ]; then</span>
+<span class="w">          </span><span class="no">echo &quot;Set the ELASTIC_PASSWORD environment variable in the .env file&quot;;</span>
+<span class="w">          </span><span class="no">exit 1;</span>
+<span class="w">        </span><span class="no">elif [ x${KIBANA_PASSWORD} == x ]; then</span>
+<span class="w">          </span><span class="no">echo &quot;Set the KIBANA_PASSWORD environment variable in the .env file&quot;;</span>
+<span class="w">          </span><span class="no">exit 1;</span>
+<span class="w">        </span><span class="no">fi;</span>
+<span class="w">        </span><span class="no">if [ ! -f config/certs/ca.zip ]; then</span>
+<span class="w">          </span><span class="no">echo &quot;Creating CA&quot;;</span>
+<span class="w">          </span><span class="no">bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;</span>
+<span class="w">          </span><span class="no">unzip config/certs/ca.zip -d config/certs;</span>
+<span class="w">        </span><span class="no">fi;</span>
+<span class="w">        </span><span class="no">if [ ! -f config/certs/certs.zip ]; then</span>
+<span class="w">          </span><span class="no">echo &quot;Creating certs&quot;;</span>
+<span class="w">          </span><span class="no">echo -ne \</span>
+<span class="w">          </span><span class="no">&quot;instances:\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;  - name: es01\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;    dns:\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - es01\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - localhost\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - ${HOST_NAME}\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;    ip:\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - 127.0.0.1\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - 0.0.0.0\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - ${HOST_IP}\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;  - name: kibana\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;    dns:\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - kibana\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - localhost\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - ${HOST_NAME}\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;    ip:\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - 127.0.0.1\n&quot;\</span>
+<span class="w">          </span><span class="no">&quot;      - ${HOST_IP}\n&quot;\</span>
+<span class="w">          </span><span class="no">&gt; config/certs/instances.yml;</span>
+<span class="w">          </span><span class="no">bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;</span>
+<span class="w">          </span><span class="no">unzip config/certs/certs.zip -d config/certs;</span>
+<span class="w">        </span><span class="no">fi;</span>
+<span class="w">        </span><span class="no">echo &quot;Setting file permissions&quot;</span>
+<span class="w">        </span><span class="no">chown -R root:root config/certs;</span>
+<span class="w">        </span><span class="no">find . -type d -exec chmod 750 \{\} \;;</span>
+<span class="w">        </span><span class="no">find . -type f -exec chmod 640 \{\} \;;</span>
+<span class="w">        </span><span class="no">echo &quot;Waiting for Elasticsearch availability&quot;;</span>
+<span class="w">        </span><span class="no">until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q &quot;missing authentication credentials&quot;; do sleep 30; done;</span>
+<span class="w">        </span><span class="no">echo &quot;Setting kibana_system password&quot;;</span>
+<span class="w">        </span><span class="no">until curl -s -X POST --cacert config/certs/ca/ca.crt -u &quot;elastic:${ELASTIC_PASSWORD}&quot; -H &quot;Content-Type: application/json&quot; https://es01:9200/_security/user/kibana_system/_password -d &quot;{\&quot;password\&quot;:\&quot;${KIBANA_PASSWORD}\&quot;}&quot; | grep -q &quot;^{}&quot;; do sleep 10; done;</span>
+<span class="w">        </span><span class="no">echo &quot;All done!&quot;;</span>
+<span class="w">      </span><span class="no">&#39;</span>
+<span class="w">    </span><span class="nt">healthcheck</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;CMD-SHELL&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;[</span><span class="nv"> </span><span class="s">-f</span><span class="nv"> </span><span class="s">config/certs/es01/es01.crt</span><span class="nv"> </span><span class="s">]&quot;</span><span class="w"> </span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1s</span>
+<span class="w">      </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
+<span class="w">      </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120</span>
+
+<span class="w">  </span><span class="nt">es01</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">setup</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">condition</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">service_healthy</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}</span>
+<span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">co.elastic.logs/module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">elasticsearch</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">certs:/usr/share/elasticsearch/config/certs</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">esdata01:/usr/share/elasticsearch/data</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${ES_PORT}:9200</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">node.name=es01</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cluster.name=${CLUSTER_NAME}</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">discovery.type=single-node</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ELASTIC_PASSWORD=${ELASTIC_PASSWORD}</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bootstrap.memory_lock=true</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.enabled=true</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.http.ssl.enabled=true</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.http.ssl.key=certs/es01/es01.key</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.http.ssl.certificate=certs/es01/es01.crt</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.transport.ssl.enabled=true</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.transport.ssl.key=certs/es01/es01.key</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.transport.ssl.certificate=certs/es01/es01.crt</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.security.transport.ssl.verification_mode=certificate</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xpack.license.self_generated.type=${LICENSE}</span>
+<span class="w">    </span><span class="nt">mem_limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${ES_MEM_LIMIT}</span>
+<span class="w">    </span><span class="nt">ulimits</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">memlock</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">soft</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-1</span>
+<span class="w">        </span><span class="nt">hard</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-1</span>
+<span class="w">    </span><span class="nt">healthcheck</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">test</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">[</span>
+<span class="w">          </span><span class="s">&quot;CMD-SHELL&quot;</span><span class="p p-Indicator">,</span>
+<span class="w">          </span><span class="s">&quot;curl</span><span class="nv"> </span><span class="s">-s</span><span class="nv"> </span><span class="s">--cacert</span><span class="nv"> </span><span class="s">config/certs/ca/ca.crt</span><span class="nv"> </span><span class="s">https://localhost:9200</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">grep</span><span class="nv"> </span><span class="s">-q</span><span class="nv"> </span><span class="s">&#39;missing</span><span class="nv"> </span><span class="s">authentication</span><span class="nv"> </span><span class="s">credentials&#39;&quot;</span>
+<span class="w">        </span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
+<span class="w">      </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
+<span class="w">      </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120</span>
+
+<span class="w">  </span><span class="nt">kibana</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">es01</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">condition</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">service_healthy</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docker.elastic.co/kibana/kibana:${STACK_VERSION}</span>
+<span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">co.elastic.logs/module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kibana</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">certs:/usr/share/kibana/config/certs</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kibanadata:/usr/share/kibana/data</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${KIBANA_PORT}:5601</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SERVERNAME=kibana</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ELASTICSEARCH_HOSTS=https://es01:9200</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ELASTICSEARCH_USERNAME=kibana_system</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}</span>
+<span class="w">    </span><span class="nt">mem_limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${KB_MEM_LIMIT}</span>
+<span class="w">    </span><span class="nt">healthcheck</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">test</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">[</span>
+<span class="w">          </span><span class="s">&quot;CMD-SHELL&quot;</span><span class="p p-Indicator">,</span>
+<span class="w">          </span><span class="s">&quot;curl</span><span class="nv"> </span><span class="s">-s</span><span class="nv"> </span><span class="s">-I</span><span class="nv"> </span><span class="s">http://localhost:5601</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">grep</span><span class="nv"> </span><span class="s">-q</span><span class="nv"> </span><span class="s">&#39;HTTP/1.1</span><span class="nv"> </span><span class="s">302</span><span class="nv"> </span><span class="s">Found&#39;&quot;</span>
+<span class="w">        </span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
+<span class="w">      </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
+<span class="w">      </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120</span>
+</code></pre></div>
+
+<p>Let's spin this up.</p>
+<div class="codehilite"><pre><span></span><code>docker-compose<span class="w"> </span>-f<span class="w"> </span>docker-compose-elastic.yaml<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+
+<p>You should now have an instance of Kibana hosted on port 5601 of your machine.</p>
+<p><img alt="elastic-login" src="https://androiddrew.github.io/images/elastic-login.png"></p>
+<p>Next we will create a <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-lifecycle-management-api.html">Index Lifecycle Management Policy</a>. There could be a lot of optimization you can do here in the process of moving data between phases to deletion. For this setup, we are going with a simple 30-day retainment policy all on "hot" storage, which is fine because we don't have a multinode setup. </p>
+<p>I find it easiest to use the Dev Tools for this, but you could also choose to use the ReST API. Go to Menu &gt; Management &gt; Dev Tools, enter the following policy object (adjusted to your needs), and submit it.</p>
+<div class="codehilite"><pre><span></span><code>PUT _ilm/policy/otel_daily_rollover_policy
+{
+  &quot;policy&quot;: {
+    &quot;phases&quot;: {
+      &quot;hot&quot;: {
+        &quot;actions&quot;: {
+          &quot;rollover&quot;: {
+            &quot;max_age&quot;: &quot;1d&quot;
+          }
+        }
+      },
+      &quot;delete&quot;: {
+        &quot;min_age&quot;: &quot;30d&quot;,
+        &quot;actions&quot;: {
+          &quot;delete&quot;: {}
+        }
+      }
+    }
+  }
+}
+</code></pre></div>
+
+<p>For any of the API requests we make, you should receive a 200 - OK response containing:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;acknowledged&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Now we want to create an <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-templates.html">index template</a>. Since this is a single-node cluster we are just going to specify shards and replicas as 1. We will apply our <code>otel_daily_rollover_policy</code>, and include an alais for rollover. This alais "otel-logs-lab" will make it easier for us in our OTEL collector to specify one index to ship events to, and Elastic will store them in the active index for us.</p>
+<div class="codehilite"><pre><span></span><code>PUT _index_template/otel_logs_template
+{
+  &quot;index_patterns&quot;: [&quot;otel-logs-lab-*&quot;],  
+  &quot;template&quot;: {
+    &quot;settings&quot;: {
+      &quot;number_of_shards&quot;: 1,
+      &quot;number_of_replicas&quot;: 1,
+      &quot;index.lifecycle.name&quot;: &quot;otel_daily_rollover_policy&quot;,  
+      &quot;index.lifecycle.rollover_alias&quot;: &quot;otel-logs-lab&quot;  
+    }
+  }
+}
+</code></pre></div>
+
+<p>Before accepting any documents from our collector we have to create the first "active" index. Here I am using support for <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#api-date-math-index-names">date math in index names</a>.</p>
+<div class="codehilite"><pre><span></span><code>PUT /%3Cotel-logs-lab-%7Bnow%2Fd%7D%3E
+{
+  &quot;aliases&quot;: {
+    &quot;otel-logs-lab&quot;: {
+      &quot;is_write_index&quot;: true
+    }
+  }
+}
+</code></pre></div>
+
+<p>Our last task is to create a Data View that will cover all the indexes for our OTEL logs. Open up <code>Discover</code> and then open the data view menu. Select "Create a data view". </p>
+<p><img alt="create-data-view" src="https://androiddrew.github.io/images/create-data-view.png"></p>
+<p>Now create a view with a name and the index pattern <code>otel-logs-lab-*</code>.</p>
+<p><img alt="otel-data-view" src="https://androiddrew.github.io/images/otel-data-view.png"></p>
+<p>With this in place we are now ready to receive logging data from an OTEL Collector.</p>
+<h2>Up next</h2>
+<p>The next entry in this series will cover adding the OTEL Collector to a Kubernetes cluster to export logs to our new Elastic infrastructure.</p>
+    </article>
+
+        <div class="tags">
+            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/otel.html">otel</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/opentelemetry.html">opentelemetry</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/elastic.html">elastic</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/kibana.html">kibana</a></p>
+        </div>
+
+
+        </div>
+      </div>
+    </main>
+    <!-- End Main Content -->
+    <hr class="mt-12" />
+    <!-- Footer -->
+<footer>
+    <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div class="mt-8 flex justify-center space-x-6">
+      </div>
+      <p class="mt-8 text-center text-base text-gray-400">
+        &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
+      </p>
+    </div>
+  </footer>
+    <!-- End Footer -->
+    <!-- Custom Theme JavaScript -->
+    <script src="https://androiddrew.github.io/theme/js/ruckenwind.js"></script>
+ 
+    
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'G-Q1PJ9PSLM4', 'auto');
+    ga('send', 'pageview');
+</script>
+
+  </body>
+</html>

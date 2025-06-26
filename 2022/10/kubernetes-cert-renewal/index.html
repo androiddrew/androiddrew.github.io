@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+        <title>Kubernetes Cert Renewal</title>
+
+            <link href="https://androiddrew.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Androiddrew Full Atom Feed" />
+        <!-- Custom CSS -->
+        <link href="https://androiddrew.github.io/theme/css/ruckenwind.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://androiddrew.github.io/theme/css/code_blocks/monokai.css" rel="stylesheet">
+
+
+        <!-- Custom Fonts -->
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+
+
+        <meta name="description" content="Here in the lab is an old Kubernetes 1.19 cluster that I haven't checked on in a while. I lost access to the kube-apiserver, and it...">
+
+        <meta name="author" content="Drew Bednar">
+
+        <meta name="tags" content="TLS">
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="Androiddrew">
+
+	<meta property="og:type" content="article">
+            <meta property="article:author" content="https://androiddrew.github.io/author/drew-bednar.html">
+	<meta property="og:url" content="https://androiddrew.github.io/2022/10/kubernetes-cert-renewal/">
+	<meta property="og:title" content="Kubernetes Cert Renewal">
+	<meta property="article:published_time" content="2022-10-17 00:00:00-04:00">
+            <meta property="og:description" content="Here in the lab is an old Kubernetes 1.19 cluster that I haven't checked on in a while. I lost access to the kube-apiserver, and it...">
+
+            <meta property="og:image" content="https://androiddrew.github.io/theme/img/post-bg.jpg">
+    <link rel="icon" href="/images/icons/favicon-32x32.png">
+</head>
+
+<body class="bg-gray-50 text-xl">
+    <header>
+      <div class="relative">
+        <div class="absolute inset-0">
+    <!-- Page Header -->
+          <img class="h-full w-full object-cover" src="https://androiddrew.github.io/theme/img/post-bg.jpg" alt="" aria-hidden="true" />
+        </div>
+    <!-- Nav Menu -->
+    <div class="absolute inset-0">
+<nav class="relative mx-auto text-white sticky top-0 z-10">
+  <!-- flex container for alignment. Gives flex row by default. Aligning items in the center. Justifing content with between option -->
+  <div id="navbar" class="flex items-center md:justify-between justify-end">
+      <!-- Logo with padding top 2 -->
+      <!-- Menu items -->
+      <!-- flex again for alignment but disappear on sm screens -->
+      <!-- So on md: flex  -->
+      <div class="hidden md:block">
+        <a class="p-6 text-xl font-extrabold hover:text-gray-400 duration-300 tracking-normal" href="https://androiddrew.github.io/">Androiddrew</a>
+      </div>
+      <div class="hidden md:flex">
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+      <!-- Button -->
+      <!-- Hidden on smaller screens but on md(and up) display as block -->
+  <!-- Hamburger Icon -->
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+      <span class="hamburger-top"></span>
+      <span class="hamburger-middle"></span>
+      <span class="hamburger-bottom"></span>
+  </button>
+  </div>
+  <!-- Mobile Menu -->
+  <div class="md:hidden">
+      <!-- Because it is being placed in the relative div above. -->
+      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="underline px-4 py-2 uppercase  font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+  </div>
+</nav>      </div>
+    <!-- End Nav Menu -->
+        <div class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-normal text-white align-middle">
+            Kubernetes Cert Renewal
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="text-gray-900">
+      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
+        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
+      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
+          <div class="mx-4">  -->
+    <!-- Post Content -->
+    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+        <p>Here in the lab is an old Kubernetes 1.19 cluster that I haven't checked on in a while. I lost access to the 
+kube-apiserver, and it turns out to be caused by an expired cert. Here are the steps I used to identify the issue and 
+resolve it.</p>
+<h2>I Got a Problem</h2>
+<p>I am actively studying for the <a href="https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/">Certified Kubernetes Administrator (CKA)</a> 
+and one of the tasks you are required to perform during the exam is an upgrade of a cluster. Perfect, I have a Kubernetes 
+1.19 cluster from many moons ago. The only problem is I can't seem to connect to it.</p>
+<div class="codehilite"><pre><span></span><code>$ kubectl get nodes 
+
+The connection to the server 10.0.1.159:6443 was refused - did you specify the right host or port?
+</code></pre></div>
+
+<p>Logging into the management node and checking for I errors I find:</p>
+<div class="codehilite"><pre><span></span><code>$ journalctl -e
+
+Oct 18 01:24:56 kube1 kubelet[696]: E1018 01:24:56.399808     696 kubelet.go:2183] node &quot;kube1&quot; not found 
+</code></pre></div>
+
+<p>The kube-apiserver runs inside the <code>kube-system</code> namespace. Since this cluster uses Docker as the container runtime I 
+can simply check the logs </p>
+<div class="codehilite"><pre><span></span><code>$ docker ps -a | grep kube-api
+
+d5e5415186ff        607331163122           &quot;kube-apiserver --ad…&quot;   4 minutes ago       Exited (1) 4 minutes ago                        k8s_kube-apiserver_kube-apiserver-kube1_kube-system_e62e9c7b79c44695c4f889ce8dccbe97_8245
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>$ docker logs k8s_kube-apiserver_kube-apiserver-kube1_kube-system_e62e9c7b79c44695c4f889ce8dccbe97_8245
+
+W1018 01:31:47.390824       1 clientconn.go:1223] grpc: addrConn.createTransport failed to connect to {https://127.0.0.1:2379  &lt;nil&gt; 0 &lt;nil&gt;}. Err :connection error: desc = &quot;transport: authentication handshake failed: x509: certificate has expired or is not yet valid: current time 2022-10-18T01:31:47Z is after 2022-09-24T19:19:54Z&quot;. Reconnecting...
+</code></pre></div>
+
+<p>Well, sure enough it seems like the issue with with the TLS cert.</p>
+<div class="codehilite"><pre><span></span><code>$ kubeadm version
+
+kubeadm version: &amp;version.Info{Major:&quot;1&quot;, Minor:&quot;19&quot;, GitVersion:&quot;v1.19.2&quot;, GitCommit:&quot;f5743093fd1c663cb0cbc89748f730662345d44d&quot;, GitTreeState:&quot;clean&quot;, BuildDate:&quot;2020-09-16T13:38:53Z&quot;, GoVersion:&quot;go1.15&quot;, Compiler:&quot;gc&quot;, Platform:&quot;linux/amd64&quot;}
+</code></pre></div>
+
+<p>Since this is an older version of <code>kubeadm</code> I need to use the alpha flag to check the certs.</p>
+<div class="codehilite"><pre><span></span><code>$ kubeadm alpha certs check-expiration
+
+W1018 01:38:09.425304  168347 configset.go:348] WARNING: kubeadm cannot validate component configs for API groups [kubelet.config.k8s.io kubeproxy.config.k8s.io]
+CERTIFICATE                EXPIRES                  RESIDUAL TIME   CERTIFICATE AUTHORITY   EXTERNALLY MANAGED
+admin.conf                 Sep 24, 2022 19:19 UTC   &lt;invalid&gt;                               no
+apiserver                  Sep 24, 2022 19:19 UTC   &lt;invalid&gt;       ca                      no
+apiserver-etcd-client      Sep 24, 2022 19:19 UTC   &lt;invalid&gt;       etcd-ca                 no
+apiserver-kubelet-client   Sep 24, 2022 19:19 UTC   &lt;invalid&gt;       ca                      no
+controller-manager.conf    Sep 24, 2022 19:19 UTC   &lt;invalid&gt;                               no
+etcd-healthcheck-client    Sep 24, 2022 19:19 UTC   &lt;invalid&gt;       etcd-ca                 no
+etcd-peer                  Sep 24, 2022 19:19 UTC   &lt;invalid&gt;       etcd-ca                 no
+etcd-server                Sep 24, 2022 19:19 UTC   &lt;invalid&gt;       etcd-ca                 no
+front-proxy-client         Sep 24, 2022 19:19 UTC   &lt;invalid&gt;       front-proxy-ca          no
+scheduler.conf             Sep 24, 2022 19:19 UTC   &lt;invalid&gt;                               no
+
+CERTIFICATE AUTHORITY   EXPIRES                  RESIDUAL TIME   EXTERNALLY MANAGED
+ca                      Sep 21, 2030 01:01 UTC   7y              no
+etcd-ca                 Sep 21, 2030 01:01 UTC   7y              no
+front-proxy-ca          Sep 21, 2030 01:01 UTC   7y              no
+</code></pre></div>
+
+<p>You certainly can tell this is not my primary cluster from the fact that this has been non-operational for a couple 
+weeks without me noticing. Anyway, I need to get this back into a working state before I can work on upgrading it.</p>
+<h2>Sweet New Certs</h2>
+<p>Now I was going to go into a long diatribe about creating certs and CSRs, but I decided to just take the easy way out.</p>
+<div class="codehilite"><pre><span></span><code>$ kubeadm alpha certs renew all
+
+[renew] Reading configuration from the cluster...
+[renew] FYI: You can look at this config file with &#39;kubectl -n kube-system get cm kubeadm-config -oyaml&#39;
+[renew] Error reading configuration from the Cluster. Falling back to default configuration
+
+W1018 20:01:29.055667  899153 configset.go:348] WARNING: kubeadm cannot validate component configs for API groups [kubelet.config.k8s.io kubeproxy.config.k8s.io]
+certificate embedded in the kubeconfig file for the admin to use and for kubeadm itself renewed
+certificate for serving the Kubernetes API renewed
+certificate the apiserver uses to access etcd renewed
+certificate for the API server to connect to kubelet renewed
+certificate embedded in the kubeconfig file for the controller manager to use renewed
+certificate for liveness probes to healthcheck etcd renewed
+certificate for etcd nodes to communicate with each other renewed
+certificate for serving etcd renewed
+certificate for the front proxy client renewed
+certificate embedded in the kubeconfig file for the scheduler manager to use renewed
+</code></pre></div>
+
+<p>That's it. That's all you needed. Just remember the version of my <code>kubeadm</code> was old enough to require using the <code>alpha</code> 
+subcommand. Don't worry about the cluster configuration at this time, since the kube-apiserver pod is down. I rebooted 
+the machine, copied the admin.conf to my user's home directory, and checked to make sure I could reach the cluster nodes.</p>
+<div class="codehilite"><pre><span></span><code>$ cp /etc/kubernetes/admin.conf ~/admin.conf
+$ kubectl --kubeconfig admin.conf get nodes
+
+NAME    STATUS   ROLES    AGE     VERSION
+kube1   Ready    master   2y25d   v1.19.2
+kube2   Ready    &lt;none&gt;   2y25d   v1.19.2
+kube3   Ready    &lt;none&gt;   2y25d   v1.19.2
+</code></pre></div>
+
+<h2>Time To Say Goodbye</h2>
+<p>Hope this serves you well in the future when you find yourself logging into that old cluster. </p>
+    </article>
+
+        <div class="tags">
+            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/tls.html">TLS</a></p>
+        </div>
+
+
+        </div>
+      </div>
+    </main>
+    <!-- End Main Content -->
+    <hr class="mt-12" />
+    <!-- Footer -->
+<footer>
+    <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div class="mt-8 flex justify-center space-x-6">
+      </div>
+      <p class="mt-8 text-center text-base text-gray-400">
+        &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
+      </p>
+    </div>
+  </footer>
+    <!-- End Footer -->
+    <!-- Custom Theme JavaScript -->
+    <script src="https://androiddrew.github.io/theme/js/ruckenwind.js"></script>
+ 
+    
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'G-Q1PJ9PSLM4', 'auto');
+    ga('send', 'pageview');
+</script>
+
+  </body>
+</html>

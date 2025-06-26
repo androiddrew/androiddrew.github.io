@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+        <title>The Pupper Robot Build</title>
+
+            <link href="https://androiddrew.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Androiddrew Full Atom Feed" />
+        <!-- Custom CSS -->
+        <link href="https://androiddrew.github.io/theme/css/ruckenwind.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://androiddrew.github.io/theme/css/code_blocks/monokai.css" rel="stylesheet">
+
+
+        <!-- Custom Fonts -->
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+
+
+        <meta name="description" content="The Standford Pupper I subscribe to the most excellent news letter Weekly Robotics and issue #89 happened to feature a fascinating open...">
+
+        <meta name="author" content="Drew Bednar">
+
+        <meta name="tags" content="pupper">
+        <meta name="tags" content="pi">
+        <meta name="tags" content="robotics">
+        <meta name="tags" content="python">
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="Androiddrew">
+
+	<meta property="og:type" content="article">
+            <meta property="article:author" content="https://androiddrew.github.io/author/drew-bednar.html">
+	<meta property="og:url" content="https://androiddrew.github.io/2020/06/pupper-pt1/">
+	<meta property="og:title" content="The Pupper Robot Build">
+	<meta property="article:published_time" content="2020-06-21 00:00:00-04:00">
+            <meta property="og:description" content="The Standford Pupper I subscribe to the most excellent news letter Weekly Robotics and issue #89 happened to feature a fascinating open...">
+
+            <meta property="og:image" content="https://androiddrew.github.io/theme/img/post-bg.jpg">
+    <link rel="icon" href="/images/icons/favicon-32x32.png">
+</head>
+
+<body class="bg-gray-50 text-xl">
+    <header>
+      <div class="relative">
+        <div class="absolute inset-0">
+    <!-- Page Header -->
+          <img class="h-full w-full object-cover" src="https://androiddrew.github.io/theme/img/post-bg.jpg" alt="" aria-hidden="true" />
+        </div>
+    <!-- Nav Menu -->
+    <div class="absolute inset-0">
+<nav class="relative mx-auto text-white sticky top-0 z-10">
+  <!-- flex container for alignment. Gives flex row by default. Aligning items in the center. Justifing content with between option -->
+  <div id="navbar" class="flex items-center md:justify-between justify-end">
+      <!-- Logo with padding top 2 -->
+      <!-- Menu items -->
+      <!-- flex again for alignment but disappear on sm screens -->
+      <!-- So on md: flex  -->
+      <div class="hidden md:block">
+        <a class="p-6 text-xl font-extrabold hover:text-gray-400 duration-300 tracking-normal" href="https://androiddrew.github.io/">Androiddrew</a>
+      </div>
+      <div class="hidden md:flex">
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+      <!-- Button -->
+      <!-- Hidden on smaller screens but on md(and up) display as block -->
+  <!-- Hamburger Icon -->
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+      <span class="hamburger-top"></span>
+      <span class="hamburger-middle"></span>
+      <span class="hamburger-bottom"></span>
+  </button>
+  </div>
+  <!-- Mobile Menu -->
+  <div class="md:hidden">
+      <!-- Because it is being placed in the relative div above. -->
+      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="underline px-4 py-2 uppercase  font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+  </div>
+</nav>      </div>
+    <!-- End Nav Menu -->
+        <div class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-normal text-white align-middle">
+            The Pupper Robot Build
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="text-gray-900">
+      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
+        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
+      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
+          <div class="mx-4">  -->
+    <!-- Post Content -->
+    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+        <h2>The Standford Pupper</h2>
+<p><img alt="Stanford Pupper" src="https://androiddrew.github.io/images/pupper-standing-lg.jpg"></p>
+<p>I subscribe to the most excellent news letter <a href="https://weeklyrobotics.com/">Weekly Robotics</a> and 
+<a href="https://weeklyrobotics.com/weekly-robotics-89">issue #89</a> happened to feature a fascinating open source quadruped 
+called the <a href="https://stanfordstudentrobotics.org/pupper">Pupper</a>. Consider me smitten. A few months before 
+I had purchased <a href="http://hades.mech.northwestern.edu/index.php/Modern_Robotics">Modern Robotics</a>, but couldn't relate the 
+theory to the real world. This looked to be the perfect way to put things in practice.</p>
+<h2>Sourcing the materials</h2>
+<p>In my excitement I failed to notice that <a href="https://cypress-software-inc.myshopify.com/">someone was selling kits</a> in 
+various states of completion. If I was doing it all over I would probably pay the little extra to save me both the time 
+in sourcing the parts and shipping.</p>
+<p><a href="https://github.com/stanfordroboticsclub/StanfordQuadruped">The project</a> provides a google spreadsheet with the bill of 
+materials. It is fairly well organized and I had to place orders with Amazon, McMasterCarr, JLCPCB, JX-Servo, and 
+Great3D(for routed carbon fiber parts). Placing an order direct with <a href="http://www.jx-servo.com/en/Product/">JX-Servo</a> was a little nerve wracking. I had to 
+transfer, via PayPal, $450+ dollars to a Hotmail account. I know that is more than a little weird, but since PayPal has 
+a decent dispute process I thought it was worth the risk. The sales team was extremely responsive and my order was sent 
+direct from China arriving in Michigan in under seven days. JLCPCB was also just as quick. The "Plastic Spider" vendor 
+on Great3D delivered his parts in 5 days from North Carolina. The Amazon sellers were actually the slowest, but this was 
+also during the height of the covid crisis.</p>
+<p>There are 12 parts that need to be 3d printed on an FDM Printer. I didn't notice this before, but the project provides 
+a ZIP archive of all the .stl right in the BOM sheet. I just used <a href="https://a360.co/2TEh4gQ">the Fusion360 assembly</a> to export the various body 
+components to STL files for printing. The fact that the project has a Fusion 360 assembly is a very big windfall. I 
+will definitely be modifying the body in the future to accommodate a camera, internal battery, and probably a Jetson 
+carrier board. For now though I went ahead with all the specified parts. </p>
+<p>All told I believe I spent:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Price with shipping</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Battery</td>
+<td>$31.79</td>
+</tr>
+<tr>
+<td>Battery Charger</td>
+<td>$61.47</td>
+</tr>
+<tr>
+<td>Servo Horns</td>
+<td>$75.09</td>
+</tr>
+<tr>
+<td>Pi and SD Card</td>
+<td>$65.00</td>
+</tr>
+<tr>
+<td>Hardware</td>
+<td>$207.14</td>
+</tr>
+<tr>
+<td>Servos</td>
+<td>$352.00</td>
+</tr>
+<tr>
+<td>PCB</td>
+<td>$35.25</td>
+</tr>
+<tr>
+<td>Carbon Fiber Parts</td>
+<td>$103.00</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td>$930.74</td>
+</tr>
+</tbody>
+</table>
+<p>I am not including a PS4 controller, which I already had, but I did add in the Pi above even though I had a couple to 
+spare. That is a little more expensive than advertised, but keep in mind I have enough hardware now to build about 5 
+more. If you are cost conscious and tolerant of long delivery times I think there are opportunities to get the servo 
+horns for ~$30 from Banggood. Similar servos could probably be fudged for ~$150 - $200 from Ali-express, but your mileage 
+may vary and it could impact the performance of the build.</p>
+<h2>The Build</h2>
+<p><img alt="Exposed pupper" src="https://androiddrew.github.io/images/pupper-exposed-lg.jpg"></p>
+<p>The build is documented both in text and a series of Youtube videos. The text instructions could use some rework but 
+the Youtube videos filled in many of the missing sections. One item in particular that was not defined explicitly in the 
+instructions I followed was the extension rod length. The Youtube video shows a process to derive the rod length in 
+relation to the femur, but shows an inaccurate way to determine that length. If you follow those instructions you will 
+be close to 1cm short. This causes problems later when your robot starts to walk. The value needed to be 123.5 mm from 
+center hole to center hole. Besides that I would say plan on 6 - 10 hours to build it. </p>
+<h2>Software</h2>
+<p>The software setup has room for improvement. To start, the instructions assume a specific version of Raspbian. It 
+appears that in multiples posts on the Google Group forum that many people attempted to use a newer OS version, but 
+encountered issues with items like the UDP connection requirement. I personally used the latest version of Raspbian 
+(Raspberry Pi OS (32-bit) Lite Minimal image based on Debian Buster) which only needed the udev rules for the 
+<a href="https://github.com/chrippa/ds4drv#permissions">ds4drv PS4 controller package</a> added after all installation steps in the docs were completed. </p>
+<p>The instructions use their own <a href="https://github.com/stanfordroboticsclub/RPI-Setup">RPI-setup</a> as a convenience for setup of wifi, ssh config, read only sd card, etc. It 
+isn't necessary, but definitely will save you time setting it all up manually. Once you have a base SD card you execute 
+an install shell script, which also downloads additional repos, and runs their own install shell scripts. 
+Unfortunately, none of these repos are versioned with releases so it always pulls the master branches. Does this 
+process work? Yes, but I can see it breaking very easily. I would rather see the project distribute its software as 
+.deb packages, but until they separate configuration of the robot from code I think that won't be an option. This brings
+me to my next point.</p>
+<p>The calibration process demonstrates the tight coupling of configuration to code. Once the servo calibration process is 
+complete, you must modify a python source file that contains the offsets. It would be better to define the robot as 
+configuration in something like yaml, which would allow the robot owners to make modifications. Changing the body 
+length or leg distance should not require modifying the source code. This would then allow the project maintainers to 
+package their code in .deb packages, thus simplifying the installation process. This would also have the added benefit of 
+allowing new hardware support (IMU, Lidar?) to be added with only what I hope to be a single additional .deb package 
+and a change to your robot's config. </p>
+<h2>Closing thoughts</h2>
+<p><img alt="Pupper standing side" src="https://androiddrew.github.io/images/pupper-standing-side-lg.jpg"></p>
+<p>Overall, I'm happy with the project and I have a perfectly functioning robot. The community members on the Google Group 
+are very responsive, and the project maintainer appears to be very open to feedback and community participation. We 
+will see where they take it in the future. I may even try my own hand at packaging these repos up for new comers.</p>
+<p>My goal is to take this robot from simple RC to full autonomy. Camera, voice commands, better operator feedback, and 
+maybe even a Google Coral are all in my sights. The Jetson platform is also very attractive. Stay tuned.</p>
+    </article>
+
+        <div class="tags">
+            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/pupper.html">pupper</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/pi.html">pi</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/robotics.html">robotics</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/python.html">python</a></p>
+        </div>
+
+
+        </div>
+      </div>
+    </main>
+    <!-- End Main Content -->
+    <hr class="mt-12" />
+    <!-- Footer -->
+<footer>
+    <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div class="mt-8 flex justify-center space-x-6">
+      </div>
+      <p class="mt-8 text-center text-base text-gray-400">
+        &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
+      </p>
+    </div>
+  </footer>
+    <!-- End Footer -->
+    <!-- Custom Theme JavaScript -->
+    <script src="https://androiddrew.github.io/theme/js/ruckenwind.js"></script>
+ 
+    
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'G-Q1PJ9PSLM4', 'auto');
+    ga('send', 'pageview');
+</script>
+
+  </body>
+</html>

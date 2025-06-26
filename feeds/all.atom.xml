@@ -1,0 +1,1126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Androiddrew</title><link href="https://androiddrew.github.io/" rel="alternate"></link><link href="https://androiddrew.github.io/feeds/all.atom.xml" rel="self"></link><id>https://androiddrew.github.io/</id><updated>2025-06-26T00:00:00-04:00</updated><entry><title>Debian Packaging For Golang</title><link href="https://androiddrew.github.io/2025/06/debian-packaging-for-golang/" rel="alternate"></link><published>2025-06-26T00:00:00-04:00</published><updated>2025-06-26T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2025-06-26:/2025/06/debian-packaging-for-golang/</id><summary type="html">&lt;p&gt;A primer on Debian packaging for Go binaries.&lt;/p&gt;</summary><content type="html">&lt;p&gt;I have been craving some novelty in my projects outside of work. Six years ago I remember asking myself how Debian packages were built, but I did nothing about it. Instead of reaching for the comfort of a Docker build I want to take that walk down Debian packaging lane that I avoided so many years ago. Since I have been working with Golang for the last six months let's learn together how to distribute our projects like the linux afficinados of old.&lt;/p&gt;
+&lt;p&gt;This is the primer I wish I had before taking on this task.&lt;/p&gt;
+&lt;h2&gt;Tooling&lt;/h2&gt;
+&lt;p&gt;Some key tools should be present on your system before you begin.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo&lt;span class="w"&gt; &lt;/span&gt;apt-get&lt;span class="w"&gt; &lt;/span&gt;install&lt;span class="w"&gt; &lt;/span&gt;build-essential&lt;span class="w"&gt; &lt;/span&gt;devscripts&lt;span class="w"&gt; &lt;/span&gt;debhelper
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This command installs:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;build-essential&lt;/code&gt;: A meta-package that pulls in the essential tools for compiling software, such as gcc and make.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;devscripts&lt;/code&gt;: A collection of scripts that are incredibly helpful for Debian package maintainers.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;debhelper&lt;/code&gt;: A suite of tools that simplifies the packaging process by automating common tasks.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;It is assumed your Golang dependencies are already met.&lt;/p&gt;
+&lt;h2&gt;Source vs Binary Packages&lt;/h2&gt;
+&lt;p&gt;A source package typically contains the source code of the upstream project in a &lt;code&gt;.tar.gz&lt;/code&gt; file, patches made by the package maintainer, then a Makefile file &lt;code&gt;debian/rules&lt;/code&gt; is used by the system to compile the code and create a binary package. These source packages cannot be directly installed, but they are highly portable and sometimes required for security auditing.&lt;/p&gt;
+&lt;p&gt;You are probably more familiar with binary packages. These are pre-compiled packages that are ready to install. They typically consist of the pre-compiled binary, configuration files, man pages, and other necessary data files. The contents are organized into a specific directory structure that a package manager (.e.g. &lt;code&gt;apt&lt;/code&gt;) will place on to your file system.&lt;/p&gt;
+&lt;p&gt;Binary packages need to be compiled for a specific processor architecture (e.g. x86_64 ARM64). Most times these are built for a specific operating system and version too. A benefit to this process is that dev tools do not need to be installed for a user to make use of the package.&lt;/p&gt;
+&lt;p&gt;This project focuses on building a binary package.&lt;/p&gt;
+&lt;h2&gt;Package Files and Structure&lt;/h2&gt;
+&lt;p&gt;When building a Debian package you must create a &lt;code&gt;DEBIAN/&lt;/code&gt; directory which in a typical build process will contain a number of essential files.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;DEBIAN/control&lt;/code&gt;: Contains essential metadata about the source package and the binary package(s) it will create. This includes the package name, version, dependencies, maintainer information, and a description of the software&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DEBIAN/rules&lt;/code&gt;: This is an executable Makefile that automates the building of the package. It has targets for compiling the software (build), installing it into a temporary directory (install), and creating the final .deb archive(binary). Modern rules files are often very simple, relying on &lt;code&gt;debhelper&lt;/code&gt; to do the heavy lifting&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DEBIAN/changelog&lt;/code&gt;: This file documents the changes made to the Debian package, not the upstream software. It follows a strict format and is used by the build tools to determine the package version.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DEBIAN/copyright&lt;/code&gt;: This file specifies the copyright and license of the software. It's a legal requirement and should accurately reflect the licensing terms of the upstream source code and any modifications made for the Debian package.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DEBIAN/compat&lt;/code&gt;: This file specifies the &lt;code&gt;debhelper&lt;/code&gt; compatibility level, which ensures that the build process is consistent even as &lt;code&gt;debhelper&lt;/code&gt; evolves.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DEBIAN/source/format&lt;/code&gt;: This file indicates the source package format (e.g., 3.0 (quilt))&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;A binary package can be constructed for a Go project with as little as a &lt;code&gt;control&lt;/code&gt; and &lt;code&gt;changelog&lt;/code&gt; file. Since this primer is focused on a minimal packaging process for your own golang project, we will focus on the &lt;code&gt;control&lt;/code&gt; file and the &lt;code&gt;changelog&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The files and binaries we wish to ship in our package will simply have a directory hierarchy that mirrors where these files should be installed on the &lt;a href="https://www.linuxfoundation.org/blog/blog/classic-sysadmin-the-linux-filesystem-explained"&gt;standard Linux filesystem&lt;/a&gt;. So if you want to install your project under &lt;code&gt;/opt/local/bin/foo&lt;/code&gt; you would create a directory structure next to the &lt;code&gt;DEBIAN/&lt;/code&gt; that reflects this.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;./DEBIAN/
+./opt/local/bin/foo
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This goes for configuration and data files you intend to ship too. &lt;/p&gt;
+&lt;h3&gt;Control File&lt;/h3&gt;
+&lt;p&gt;The &lt;code&gt;DBIU/control&lt;/code&gt; file defines a package's metadata and build-time parameters. Refer to  &lt;a href="https://www.debian.org/doc/debian-policy/ch-controlfields.html"&gt;https://www.debian.org/doc/debian-policy/ch-controlfields.html&lt;/a&gt; for indepth descriptions of all the available fields.&lt;/p&gt;
+&lt;p&gt;The most minimal file can contain: &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;Package: YOUR_PACKAGE_NAME
+Version: YOUR_DEBIAN_PACKAGE_VERSION
+Architecture: YOUR_TARGET_PROCESSOR_ARCHITECTURE
+Maintainer: YOUR_EMAIL(Ex: Your Name &amp;lt;youremail@example.com&amp;gt;)
+Description: YOUR_PACAKGE_DESCRIPTION
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Changelog&lt;/h3&gt;
+&lt;p&gt;The change log is not a change log of the upstream, it is a changelog of the Debian package. This file has a specific format that needs to be adhered to, or the build will fail.&lt;/p&gt;
+&lt;p&gt;A &lt;code&gt;DEBIAN/changelog&lt;/code&gt; file is a plain text file with a series of entries, where the newest entry is always at the very top. Each entry has a precise format:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;package-name (version) distribution(s); urgency=level
+
+    * Change details for the first change in this version.
+    (This can wrap to multiple lines if indented).
+
+    * Change details for the second change. This could be a bug fix.
+    (Closes: #bug-number)
+
+    -- Maintainer Name &amp;lt;maintainer@example.com&amp;gt;  Day, dd Mon yyyy hh:mm:ss +zzzz
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;devscripts&lt;/code&gt; package installed earlier has the &lt;code&gt;dch&lt;/code&gt;(debchange) tool that can assist in automating the change log changes, and ensure that they correctly formatted. &lt;/p&gt;
+&lt;h2&gt;Debian Versioning Scheme&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;[epoch:]upstream_version[-debian_revision]&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;epoch&lt;/code&gt;: small, rarely used integer that helps correct mistakes in past versioning by ensuring a new version is seen as "later" than an old one&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;upstream_version&lt;/code&gt;: The main version number from the original software developer, which can contain alphanumeric characters and symbols like periods, hyphens, and colons&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;debian_revision&lt;/code&gt; is appended by the package maintainer to signify changes to the packaging itself, such as updates to dependencies or build scripts, without any change to the upstream software&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;When assessing versions &lt;code&gt;dpkg&lt;/code&gt;'s algorithm evaluates the string from left to right, with special rules for characters like the tilde (~), which indicates a pre-release version and sorts before a final release of the same number.&lt;/p&gt;
+&lt;h2&gt;A Manual Packaging Example&lt;/h2&gt;
+&lt;p&gt;With the basics out of the way, let's assume we have a &lt;code&gt;foo&lt;/code&gt; v0.1.0 program that we would like to offer as a debian package.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;go build -o ./build/foo .&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Create the required debian package structure.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;mkdir&lt;span class="w"&gt; &lt;/span&gt;-p&lt;span class="w"&gt; &lt;/span&gt;./dist/foo_0.1.0-1/DEBIAN
+mkdir&lt;span class="w"&gt; &lt;/span&gt;-p&lt;span class="w"&gt; &lt;/span&gt;./dist/foo_0.1.0-1/usr/local/bin
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Copy the binary to the &lt;code&gt;usr/local/bin/&lt;/code&gt; directory under our package namespace and ensure it's executable.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;cp&lt;span class="w"&gt; &lt;/span&gt;./build/foo&lt;span class="w"&gt; &lt;/span&gt;./dist/foo_0.1.0-1/usr/local/bin/foo
+chmod&lt;span class="w"&gt; &lt;/span&gt;+x&lt;span class="w"&gt; &lt;/span&gt;./dist/foo_0.1.0-1/usr/local/bin/foo
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Create a &lt;code&gt;control&lt;/code&gt; file under the &lt;code&gt;DEBIAN/&lt;/code&gt; directory  &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;touch&lt;span class="w"&gt; &lt;/span&gt;./dist/foo_0.1.0-1/DEBIAN/control
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;And using a text editor add:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;Package: foo
+Version: 0.1.0-1
+Architecture: amd64
+Maintainer: Your Name &amp;lt;youremail@example.com&amp;gt;
+Description: foo - A Go Application
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now create a &lt;code&gt;changelog&lt;/code&gt; file under the &lt;code&gt;DEBIAN/&lt;/code&gt; directory. &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;touch&lt;span class="w"&gt; &lt;/span&gt;./dist/foo_0.1.0-1/DEBIAN/changelog
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We will use the debchange tool &lt;code&gt;dch&lt;/code&gt; to create the first entry in our file. Use &lt;code&gt;man dch&lt;/code&gt; to learn more about all the options available to you for editing these entries.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;dch&lt;span class="w"&gt; &lt;/span&gt;--changelog&lt;span class="w"&gt; &lt;/span&gt;./dist/foo_0.1.0-1/DEBIAN/changelog&lt;span class="w"&gt; &lt;/span&gt;--create
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since we did not set envvars for things like our package or maintainer email you will see warnings. Press enter to continue and you will drop into an text editor with a basic template.&lt;/p&gt;
+&lt;p&gt;output:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PACKAGE (VERSION) UNRELEASED; urgency=medium
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- toor &amp;lt;toor@toor-runcible&amp;gt;  Thu, 26 Jun 2025 14:28:27 -0400
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Change the contents of this entry as needed and save.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;foo (0.1.0-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- me &amp;lt;me@example.com&amp;gt;  Thu, 26 Jun 2025 14:28:27 -0400
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we can build the package with &lt;code&gt;dpkg-deb&lt;/code&gt;. Again see &lt;code&gt;man dpkg-deb&lt;/code&gt; for more information.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nb"&gt;cd&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;./dist
+dpkg-deb&lt;span class="w"&gt; &lt;/span&gt;--build&lt;span class="w"&gt; &lt;/span&gt;foo_0.1.0-1/
+
+pkg-deb:&lt;span class="w"&gt; &lt;/span&gt;building&lt;span class="w"&gt; &lt;/span&gt;package&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;in&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;foo_0.1.0-1.deb&amp;#39;&lt;/span&gt;.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You should now have successfully built a &lt;code&gt;foo_0.1.0-1.deb&lt;/code&gt; in your ./dist/ directory. &lt;/p&gt;
+&lt;p&gt;You can view the contents of this pacakge&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;dpkg-deb&lt;span class="w"&gt; &lt;/span&gt;--contents&lt;span class="w"&gt; &lt;/span&gt;./foo_0.1.0-1.deb
+
+drwxrwxr-x&lt;span class="w"&gt; &lt;/span&gt;toor/toor&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;2025&lt;/span&gt;-06-22&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:44&lt;span class="w"&gt; &lt;/span&gt;./
+drwxrwxr-x&lt;span class="w"&gt; &lt;/span&gt;toor/toor&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;2025&lt;/span&gt;-06-22&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:44&lt;span class="w"&gt; &lt;/span&gt;./usr/
+drwxrwxr-x&lt;span class="w"&gt; &lt;/span&gt;toor/toor&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;2025&lt;/span&gt;-06-22&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:44&lt;span class="w"&gt; &lt;/span&gt;./usr/local/
+drwxrwxr-x&lt;span class="w"&gt; &lt;/span&gt;toor/toor&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;2025&lt;/span&gt;-06-22&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:44&lt;span class="w"&gt; &lt;/span&gt;./usr/local/bin/
+-rwxrwxr-x&lt;span class="w"&gt; &lt;/span&gt;toor/toor&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="m"&gt;3433713&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;2025&lt;/span&gt;-06-22&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:44&lt;span class="w"&gt; &lt;/span&gt;./usr/local/bin/foo
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can test the installation of this new package&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo&lt;span class="w"&gt; &lt;/span&gt;dpkg&lt;span class="w"&gt; &lt;/span&gt;-i&lt;span class="w"&gt; &lt;/span&gt;./foo_0.1.0-1.deb
+
+Selecting&lt;span class="w"&gt; &lt;/span&gt;previously&lt;span class="w"&gt; &lt;/span&gt;unselected&lt;span class="w"&gt; &lt;/span&gt;package&lt;span class="w"&gt; &lt;/span&gt;dirp.
+&lt;span class="o"&gt;(&lt;/span&gt;Reading&lt;span class="w"&gt; &lt;/span&gt;database&lt;span class="w"&gt; &lt;/span&gt;...&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;217265&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;files&lt;span class="w"&gt; &lt;/span&gt;and&lt;span class="w"&gt; &lt;/span&gt;directories&lt;span class="w"&gt; &lt;/span&gt;currently&lt;span class="w"&gt; &lt;/span&gt;installed.&lt;span class="o"&gt;)&lt;/span&gt;
+Preparing&lt;span class="w"&gt; &lt;/span&gt;to&lt;span class="w"&gt; &lt;/span&gt;unpack&lt;span class="w"&gt; &lt;/span&gt;foo_0.1.0-1.deb&lt;span class="w"&gt; &lt;/span&gt;...
+Unpacking&lt;span class="w"&gt; &lt;/span&gt;foo&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.1.0-1&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;...
+Setting&lt;span class="w"&gt; &lt;/span&gt;up&lt;span class="w"&gt; &lt;/span&gt;foo&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.1.0-1&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We can check that a the binary is now in our &lt;code&gt;/usr/local/bin&lt;/code&gt;&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;which&lt;span class="w"&gt; &lt;/span&gt;foo
+
+/usr/local/bin/foo
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We can see which version of the package is installed &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;dpkg&lt;span class="w"&gt; &lt;/span&gt;-l&lt;span class="w"&gt; &lt;/span&gt;foo
+
+&lt;span class="nv"&gt;Desired&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;Unknown/Install/Remove/Purge/Hold
+&lt;span class="p"&gt;|&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;Status&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+&lt;span class="p"&gt;|&lt;/span&gt;/&lt;span class="w"&gt; &lt;/span&gt;Err?&lt;span class="o"&gt;=(&lt;/span&gt;none&lt;span class="o"&gt;)&lt;/span&gt;/Reinst-required&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Status,Err:&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;uppercase&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;bad&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="o"&gt;||&lt;/span&gt;/&lt;span class="w"&gt; &lt;/span&gt;Name&lt;span class="w"&gt;           &lt;/span&gt;Version&lt;span class="w"&gt;      &lt;/span&gt;Architecture&lt;span class="w"&gt; &lt;/span&gt;Description
++++-&lt;span class="o"&gt;==============&lt;/span&gt;-&lt;span class="o"&gt;============&lt;/span&gt;-&lt;span class="o"&gt;============&lt;/span&gt;-&lt;span class="o"&gt;=================================&lt;/span&gt;
+ii&lt;span class="w"&gt;  &lt;/span&gt;foo&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.1.0-1&lt;span class="w"&gt;      &lt;/span&gt;amd64&lt;span class="w"&gt;        &lt;/span&gt;foo&lt;span class="w"&gt; &lt;/span&gt;-&lt;span class="w"&gt; &lt;/span&gt;A&lt;span class="w"&gt; &lt;/span&gt;Go&lt;span class="w"&gt; &lt;/span&gt;application
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;And we can remove it.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo&lt;span class="w"&gt; &lt;/span&gt;dpkg&lt;span class="w"&gt; &lt;/span&gt;-r&lt;span class="w"&gt; &lt;/span&gt;foo
+
+&lt;span class="o"&gt;(&lt;/span&gt;Reading&lt;span class="w"&gt; &lt;/span&gt;database&lt;span class="w"&gt; &lt;/span&gt;...&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;217268&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;files&lt;span class="w"&gt; &lt;/span&gt;and&lt;span class="w"&gt; &lt;/span&gt;directories&lt;span class="w"&gt; &lt;/span&gt;currently&lt;span class="w"&gt; &lt;/span&gt;installed.&lt;span class="o"&gt;)&lt;/span&gt;
+Removing&lt;span class="w"&gt; &lt;/span&gt;foo&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.1.0-1&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;...
+dpkg:&lt;span class="w"&gt; &lt;/span&gt;warning:&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;while&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;removing&lt;span class="w"&gt; &lt;/span&gt;dirp,&lt;span class="w"&gt; &lt;/span&gt;directory&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;/usr/local/bin&amp;#39;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;not&lt;span class="w"&gt; &lt;/span&gt;empty&lt;span class="w"&gt; &lt;/span&gt;so&lt;span class="w"&gt; &lt;/span&gt;not&lt;span class="w"&gt; &lt;/span&gt;removed
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We can disregard the warning because the package manager is doing what its supposed to. It removed the &lt;code&gt;/usr/local/bin/foo&lt;/code&gt; and attempts to clean up all directories it may have created in the process. Once it finds existing files in the directory structure it was avoid deleting them.&lt;/p&gt;
+&lt;h2&gt;Where To Go From Here&lt;/h2&gt;
+&lt;p&gt;This article barely scratches the surface on Debian packaging. You technically have a package that meets all of Debian's requirements. Maybe you are stasfied with that, and call it a day. If not the best source for your next steps down this path are to read the official &lt;a href="https://wiki.debian.org/Packaging"&gt;Debian Packaging Guide&lt;/a&gt;. In it you will also find the official guidance on &lt;a href="https://go-team.pages.debian.net/packaging.html"&gt;building Go packages for Debian&lt;/a&gt; and be introduced to tools like &lt;a href="https://people.debian.org/~stapelberg/2015/07/27/dh-make-golang.html"&gt;dh-make-golang&lt;/a&gt; which can take most of the toil out of packaging non-trival go projects with deep dependencies. &lt;/p&gt;
+&lt;p&gt;Thanks for the attention and good luck!&lt;/p&gt;</content><category term="golang"></category><category term="golang"></category><category term="packaging"></category></entry><entry><title>Hello Web Serial Console</title><link href="https://androiddrew.github.io/2025/03/hello-webserial/" rel="alternate"></link><published>2025-03-08T00:00:00-05:00</published><updated>2025-03-08T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2025-03-08:/2025/03/hello-webserial/</id><summary type="html">&lt;p&gt;Last year, a former coworker challenged me to "ship something!" Around that time, I had been tinkering with MicroPython again, so I figured—why not experiment with the WebSerial API and talk directly to my micro controller?&lt;/p&gt;
+&lt;h1&gt;Hello Webserial Console&lt;/h1&gt;
+&lt;p&gt;Hello &lt;a href="https://webserialconsole.com"&gt;https …&lt;/a&gt;&lt;/p&gt;</summary><content type="html">&lt;p&gt;Last year, a former coworker challenged me to "ship something!" Around that time, I had been tinkering with MicroPython again, so I figured—why not experiment with the WebSerial API and talk directly to my micro controller?&lt;/p&gt;
+&lt;h1&gt;Hello Webserial Console&lt;/h1&gt;
+&lt;p&gt;Hello &lt;a href="https://webserialconsole.com"&gt;https://webserialconsole.com&lt;/a&gt;, the answer to my former coworker's challenge. Source code available under AGPL at &lt;a href="https://github.com/androiddrew/webserial"&gt;https://github.com/androiddrew/webserial&lt;/a&gt;. This project was a lot of fun to build, and hopefully you'll find some utility in it too. Let's dive in to what this project is about, and what makes it tick.&lt;/p&gt;
+&lt;h2&gt;What Does It Do?&lt;/h2&gt;
+&lt;p&gt;Well, you know those &lt;a href="https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter"&gt;Universal Asynchronous Receiver and Transmitters (UARTs)&lt;/a&gt; everyone is always talking about? It can talk to those, thanks to the magic of the &lt;a href="https://wicg.github.io/serial/"&gt;Webserial API&lt;/a&gt; built into Chrome 89+, Edge, or Opera. We are not limited to UARTs either, an &lt;a href="https://en.wikipedia.org/wiki/RS-232"&gt;RS232 device&lt;/a&gt; connected to your PC will work too.&lt;/p&gt;
+&lt;p&gt;I am using a &lt;a href="https://www.raspberrypi.com/products/raspberry-pi-pico-2/"&gt;Pico2&lt;/a&gt; in this walk through. This particular device has an onboard USB to UART bridge, allowing us to plug our device directly into the computer. If your micro controller lacks one of these, you can use an inexpensive USB to TTL adaptor and a bread board to connect to the serial GPIO pins directly. Expect to pay $5-15, but be sure the adapter you select is compatible with the logic level voltage of your micro controller. Typical values are 5V 3.3V 2.5V 1.8V. An &lt;a href="https://www.arduino.cc/"&gt;Arduino&lt;/a&gt; for example uses 5V logic, while our Pico2 here is 3.3V.&lt;/p&gt;
+&lt;h2&gt;Connecting Your Device&lt;/h2&gt;
+&lt;p&gt;With your micro controller plugged into your PC, head over to &lt;a href="https://webserialconsole.com/"&gt;https://webserialconsole.com/&lt;/a&gt;. The Chrome browser does not allow websites to access serial devices automatically, instead you must grant explicit permission to use a specific device. Devices are remembered across sessions, but device connections are not permanent. Refreshing the browser will close the active connection requiring you to reconnect. Since this is our first time, select the + button, which will open a list of available devices to connect to. My particular device is the &lt;code&gt;Board in FS mode (cu.usbmodem143101)&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="wsc_screen_cap.png" src="https://androiddrew.github.io/images/wsc_select_device.png"&gt;&lt;/p&gt;
+&lt;p&gt;After granting permission, the device is now available in the &lt;code&gt;Port:&lt;/code&gt; dropdown menu. Serial devices can communicate at different &lt;a href="https://en.wikipedia.org/wiki/Baud"&gt;baud rates&lt;/a&gt;. The Pico2 operates at 115200. Be sure to look up your own device's supported baud rates, select the correct &lt;code&gt;Baud:&lt;/code&gt; value in the drop down, and then press connect.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="wsc_first_connect.png" src="https://androiddrew.github.io/images/wsc_select_device.png"&gt;&lt;/p&gt;
+&lt;p&gt;Simple as that. Since this board is running MicroPython we aren't limited to just reading output, we have access to the REPL and can transmit from the browser to our board. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="wsc_hello.png" src="https://androiddrew.github.io/images/wsc_hello.png"&gt;&lt;/p&gt;
+&lt;p&gt;If our device was logging sensor data we would see the most recent values with &lt;code&gt;Autoscroll&lt;/code&gt; checked. If we need to clear out the console, we have a &lt;code&gt;Clear&lt;/code&gt; button. That's it in a nutshell. Refreshing the page will terminate the connection, or you can press the &lt;code&gt;Disconnect&lt;/code&gt; button.&lt;/p&gt;
+&lt;h2&gt;How Webserial Console Is Deployed&lt;/h2&gt;
+&lt;p&gt;This application is a simple HTML, CSS, and Javascript app. No fancy framework. I did use &lt;a href="https://vite.dev/"&gt;Vite&lt;/a&gt; for builds and as a development server, but I could have easily avoided it. My home lab would have been suitable for hosting, but since this project's intent was to push my skills, I needed to step outside of my comfort zone and try a new deployment platform. I chose to host this on Cloudflare using the &lt;a href="https://pages.cloudflare.com/"&gt;Pages service&lt;/a&gt;. &lt;/p&gt;
+&lt;p&gt;Overall I am going to give Cloudflare Pages a thumbs up. Since I purchased the domain name through Cloudflare's registrar I get free hosting and a Cloudflare managed TLS certificate out of the box. Deployments are also trivial. On push to main the Cloudflare worker just runs &lt;code&gt;npm install &amp;amp;&amp;amp; make build&lt;/code&gt; and deploys the output artifacts. On top of that, I get free page analytics, which has been incredibly motivating to see how many individuals are using my application.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="wsc_cloudflare.png" src="https://androiddrew.github.io/images/wsc_cloudflare.png"&gt;&lt;/p&gt;
+&lt;h2&gt;Thank You and Enjoy&lt;/h2&gt;
+&lt;p&gt;Thanks for taking the time and I hope you find this project useful. &lt;/p&gt;</content><category term="webdev"></category><category term="webdev"></category><category term="tailwind"></category></entry><entry><title>Learning Observability Part 2</title><link href="https://androiddrew.github.io/2024/02/learning-observability-part-2/" rel="alternate"></link><published>2024-02-18T00:00:00-05:00</published><updated>2024-02-18T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2024-02-18:/2024/02/learning-observability-part-2/</id><summary type="html">&lt;p&gt;We move on from the why in &lt;a href="https://androiddrew.github.io/2024/02/learning-observability-part-1/"&gt;learning-observability-part-1&lt;/a&gt; to the how in this entry by using docker-compose to deploy a single node Elastic and Kibana service to the lab. &lt;/p&gt;
+&lt;h2&gt;What and where are we deploying?&lt;/h2&gt;
+&lt;p&gt;As mentioned in the first entry of …&lt;/p&gt;</summary><content type="html">&lt;p&gt;We move on from the why in &lt;a href="https://androiddrew.github.io/2024/02/learning-observability-part-1/"&gt;learning-observability-part-1&lt;/a&gt; to the how in this entry by using docker-compose to deploy a single node Elastic and Kibana service to the lab. &lt;/p&gt;
+&lt;h2&gt;What and where are we deploying?&lt;/h2&gt;
+&lt;p&gt;As mentioned in the first entry of this series, &lt;a href="https://www.elastic.co/"&gt;Elastic and Kibana&lt;/a&gt; will be serving as the logging infrastructure to our &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; observability stack. Elastic can be a little resource intensive, but as long as we have 2 CPU cores, 4-8 GB of RAM, and 50-ish GB of disk we can have a decent lab setup. I am fortunate enough to have a spare 2011 Dell Optiplex 7010 with a 4-core Intel7 (with hyper threading), 32 GB of RAM ( DDR3-1600 so “not fast” by today’s standards), and a 500 GB SSD, which I will be using for this setup. These are cheap to get parts for, and you can usually find them in liquidation auctions or university surplus stores. Their price coupled with the low power consumption of 250 Watts, makes them a great lab machine.&lt;/p&gt;
+&lt;h2&gt;The install&lt;/h2&gt;
+&lt;p&gt;To begin, I installed the latest &lt;a href="https://releases.ubuntu.com/releases/22.04.3/"&gt;Ubuntu LTS release (22.04.3 aka Jammy Jellyfish)&lt;/a&gt; to serve as the host OS. I use &lt;a href="https://docs.ansible.com/ansible/latest/index.html"&gt;Ansible&lt;/a&gt; to manage all of the machines in my lab, so I am going to skip the setup of Docker and other system dependencies since I automated it a long time again. &lt;/p&gt;
+&lt;p&gt;I am certain that there are more effective docker-compose setups for a single-node Elastic/Kibana, but with the kids, I am always short on time. I am simply going to reference the &lt;a href="https://www.elastic.co/blog/getting-started-with-the-elastic-stack-and-docker-compose"&gt;official Elastic blog&lt;/a&gt; with some minor modifications.&lt;/p&gt;
+&lt;p&gt;First, we need to set up some environment variables.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ELASTIC_PASSWORD&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;changeme
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;KIBANA_PASSWORD&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;changeme
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;HOST_NAME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;docker1.runcible.io
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;STACK_VERSION&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;8.7.1&amp;quot;&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;LICENSE&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;basic
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ES_MEM_LIMIT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;8096000000&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;KB_MEM_LIMIT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;2048000000&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;KIBANA_PORT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;5601&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ES_PORT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;9200&lt;/span&gt;
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;COMPOSE_PROJECT_NAME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;elasticlab
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;CLUSTER_NAME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;docker-cluster
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ENCRYPTION_KEY&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="k"&gt;$(&lt;/span&gt;python3&lt;span class="w"&gt; &lt;/span&gt;-c&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;import secrets;print(secrets.token_urlsafe(32))&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;|&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;tee&lt;span class="w"&gt; &lt;/span&gt;xpack_encryption_key.txt&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note if you reviewed the Elastic blog post above, I have removed Logstash, Filebeat, and Metricsbeat from this setup since we will be using the Opentelemetry collector. I've also copied the &lt;code&gt;ENCRYPTION_KEY&lt;/code&gt; to a clear text file for later use. Once again, I don't care about security since this is just a lab. You do what you want. I've also added my machine's &lt;code&gt;HOST_NAME&lt;/code&gt; which will be included in the cert, allowing me to use the CA that is generated in curl commands to the Elastic API using the hostname.  &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# docker-compose-elastic.yaml&lt;/span&gt;
+&lt;span class="nt"&gt;version&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;3.8&amp;quot;&lt;/span&gt;
+
+&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;certs&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;driver&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;local&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;esdata01&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;driver&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;local&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;kibanadata&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;driver&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;local&lt;/span&gt;
+
+&lt;span class="nt"&gt;networks&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;default&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;elastic&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;external&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;false&lt;/span&gt;
+
+&lt;span class="nt"&gt;services&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;setup&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;certs:/usr/share/elasticsearch/config/certs&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;user&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;0&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;command&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p p-Indicator"&gt;&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="no"&gt;bash -c &amp;#39;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;if [ x${ELASTIC_PASSWORD} == x ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Set the ELASTIC_PASSWORD environment variable in the .env file&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;exit 1;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;elif [ x${KIBANA_PASSWORD} == x ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Set the KIBANA_PASSWORD environment variable in the .env file&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;exit 1;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;fi;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;if [ ! -f config/certs/ca.zip ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Creating CA&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;unzip config/certs/ca.zip -d config/certs;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;fi;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;if [ ! -f config/certs/certs.zip ]; then&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Creating certs&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;echo -ne \&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;instances:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;  - name: es01\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    dns:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - es01\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - localhost\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_NAME}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    ip:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - 127.0.0.1\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - 0.0.0.0\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_IP}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;  - name: kibana\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    dns:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - kibana\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - localhost\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_NAME}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;    ip:\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - 127.0.0.1\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;quot;      - ${HOST_IP}\n&amp;quot;\&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;&amp;gt; config/certs/instances.yml;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="no"&gt;unzip config/certs/certs.zip -d config/certs;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;fi;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Setting file permissions&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;chown -R root:root config/certs;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;find . -type d -exec chmod 750 \{\} \;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;find . -type f -exec chmod 640 \{\} \;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Waiting for Elasticsearch availability&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q &amp;quot;missing authentication credentials&amp;quot;; do sleep 30; done;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;Setting kibana_system password&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;until curl -s -X POST --cacert config/certs/ca/ca.crt -u &amp;quot;elastic:${ELASTIC_PASSWORD}&amp;quot; -H &amp;quot;Content-Type: application/json&amp;quot; https://es01:9200/_security/user/kibana_system/_password -d &amp;quot;{\&amp;quot;password\&amp;quot;:\&amp;quot;${KIBANA_PASSWORD}\&amp;quot;}&amp;quot; | grep -q &amp;quot;^{}&amp;quot;; do sleep 10; done;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="no"&gt;echo &amp;quot;All done!&amp;quot;;&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="no"&gt;&amp;#39;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;healthcheck&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;test&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p p-Indicator"&gt;[&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;CMD-SHELL&amp;quot;&lt;/span&gt;&lt;span class="p p-Indicator"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;[&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-f&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;config/certs/es01/es01.crt&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;]&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;interval&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;1s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;timeout&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;5s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;retries&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;120&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;es01&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;depends_on&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;setup&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;condition&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;service_healthy&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;labels&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;co.elastic.logs/module&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;elasticsearch&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;certs:/usr/share/elasticsearch/config/certs&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;esdata01:/usr/share/elasticsearch/data&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;ports&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${ES_PORT}:9200&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;environment&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;node.name=es01&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;cluster.name=${CLUSTER_NAME}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;discovery.type=single-node&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTIC_PASSWORD=${ELASTIC_PASSWORD}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;bootstrap.memory_lock=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.enabled=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.enabled=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.key=certs/es01/es01.key&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.certificate=certs/es01/es01.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.enabled=true&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.key=certs/es01/es01.key&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.certificate=certs/es01/es01.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.security.transport.ssl.verification_mode=certificate&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;xpack.license.self_generated.type=${LICENSE}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;mem_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${ES_MEM_LIMIT}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;ulimits&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;memlock&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;soft&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;-1&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;hard&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;-1&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;healthcheck&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;test&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;[&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;CMD-SHELL&amp;quot;&lt;/span&gt;&lt;span class="p p-Indicator"&gt;,&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;curl&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-s&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;--cacert&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;config/certs/ca/ca.crt&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;https://localhost:9200&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;|&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;grep&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-q&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#39;missing&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;authentication&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;credentials&amp;#39;&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;interval&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;timeout&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;retries&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;120&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;kibana&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;depends_on&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;es01&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nt"&gt;condition&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;service_healthy&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;docker.elastic.co/kibana/kibana:${STACK_VERSION}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;labels&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;co.elastic.logs/module&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;kibana&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;certs:/usr/share/kibana/config/certs&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;kibanadata:/usr/share/kibana/data&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;ports&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${KIBANA_PORT}:5601&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;environment&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;SERVERNAME=kibana&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_HOSTS=https://es01:9200&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_USERNAME=kibana_system&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="p p-Indicator"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;mem_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;${KB_MEM_LIMIT}&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nt"&gt;healthcheck&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;test&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;[&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;CMD-SHELL&amp;quot;&lt;/span&gt;&lt;span class="p p-Indicator"&gt;,&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;curl&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-s&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-I&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;http://localhost:5601&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;|&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;grep&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;-q&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#39;HTTP/1.1&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;302&lt;/span&gt;&lt;span class="nv"&gt; &lt;/span&gt;&lt;span class="s"&gt;Found&amp;#39;&amp;quot;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;interval&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;timeout&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;10s&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;retries&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;120&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's spin this up.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;docker-compose&lt;span class="w"&gt; &lt;/span&gt;-f&lt;span class="w"&gt; &lt;/span&gt;docker-compose-elastic.yaml&lt;span class="w"&gt; &lt;/span&gt;up&lt;span class="w"&gt; &lt;/span&gt;-d
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You should now have an instance of Kibana hosted on port 5601 of your machine.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="elastic-login" src="https://androiddrew.github.io/images/elastic-login.png"&gt;&lt;/p&gt;
+&lt;p&gt;Next we will create a &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-lifecycle-management-api.html"&gt;Index Lifecycle Management Policy&lt;/a&gt;. There could be a lot of optimization you can do here in the process of moving data between phases to deletion. For this setup, we are going with a simple 30-day retainment policy all on "hot" storage, which is fine because we don't have a multinode setup. &lt;/p&gt;
+&lt;p&gt;I find it easiest to use the Dev Tools for this, but you could also choose to use the ReST API. Go to Menu &amp;gt; Management &amp;gt; Dev Tools, enter the following policy object (adjusted to your needs), and submit it.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PUT _ilm/policy/otel_daily_rollover_policy
+{
+  &amp;quot;policy&amp;quot;: {
+    &amp;quot;phases&amp;quot;: {
+      &amp;quot;hot&amp;quot;: {
+        &amp;quot;actions&amp;quot;: {
+          &amp;quot;rollover&amp;quot;: {
+            &amp;quot;max_age&amp;quot;: &amp;quot;1d&amp;quot;
+          }
+        }
+      },
+      &amp;quot;delete&amp;quot;: {
+        &amp;quot;min_age&amp;quot;: &amp;quot;30d&amp;quot;,
+        &amp;quot;actions&amp;quot;: {
+          &amp;quot;delete&amp;quot;: {}
+        }
+      }
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For any of the API requests we make, you should receive a 200 - OK response containing:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;acknowledged&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we want to create an &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-templates.html"&gt;index template&lt;/a&gt;. Since this is a single-node cluster we are just going to specify shards and replicas as 1. We will apply our &lt;code&gt;otel_daily_rollover_policy&lt;/code&gt;, and include an alais for rollover. This alais "otel-logs-lab" will make it easier for us in our OTEL collector to specify one index to ship events to, and Elastic will store them in the active index for us.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PUT _index_template/otel_logs_template
+{
+  &amp;quot;index_patterns&amp;quot;: [&amp;quot;otel-logs-lab-*&amp;quot;],  
+  &amp;quot;template&amp;quot;: {
+    &amp;quot;settings&amp;quot;: {
+      &amp;quot;number_of_shards&amp;quot;: 1,
+      &amp;quot;number_of_replicas&amp;quot;: 1,
+      &amp;quot;index.lifecycle.name&amp;quot;: &amp;quot;otel_daily_rollover_policy&amp;quot;,  
+      &amp;quot;index.lifecycle.rollover_alias&amp;quot;: &amp;quot;otel-logs-lab&amp;quot;  
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Before accepting any documents from our collector we have to create the first "active" index. Here I am using support for &lt;a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#api-date-math-index-names"&gt;date math in index names&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;PUT /%3Cotel-logs-lab-%7Bnow%2Fd%7D%3E
+{
+  &amp;quot;aliases&amp;quot;: {
+    &amp;quot;otel-logs-lab&amp;quot;: {
+      &amp;quot;is_write_index&amp;quot;: true
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Our last task is to create a Data View that will cover all the indexes for our OTEL logs. Open up &lt;code&gt;Discover&lt;/code&gt; and then open the data view menu. Select "Create a data view". &lt;/p&gt;
+&lt;p&gt;&lt;img alt="create-data-view" src="https://androiddrew.github.io/images/create-data-view.png"&gt;&lt;/p&gt;
+&lt;p&gt;Now create a view with a name and the index pattern &lt;code&gt;otel-logs-lab-*&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="otel-data-view" src="https://androiddrew.github.io/images/otel-data-view.png"&gt;&lt;/p&gt;
+&lt;p&gt;With this in place we are now ready to receive logging data from an OTEL Collector.&lt;/p&gt;
+&lt;h2&gt;Up next&lt;/h2&gt;
+&lt;p&gt;The next entry in this series will cover adding the OTEL Collector to a Kubernetes cluster to export logs to our new Elastic infrastructure.&lt;/p&gt;</content><category term="observability"></category><category term="otel"></category><category term="opentelemetry"></category><category term="elastic"></category><category term="kibana"></category></entry><entry><title>Learning Observability Part 1</title><link href="https://androiddrew.github.io/2024/02/learning-observability-part-1/" rel="alternate"></link><published>2024-02-16T00:00:00-05:00</published><updated>2024-02-16T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2024-02-16:/2024/02/learning-observability-part-1/</id><summary type="html">&lt;p&gt;I am going on a trip down the observability lane. Recently at work, we decided to adopt &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; to provide observability to our new services. In this series, I will dive right into setting up not only OpenTelemetry in an application, but …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I am going on a trip down the observability lane. Recently at work, we decided to adopt &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; to provide observability to our new services. In this series, I will dive right into setting up not only OpenTelemetry in an application, but the infrastructure necessary to observe the logs, metrics, and traces it produces. &lt;/p&gt;
+&lt;h2&gt;Who is this for?&lt;/h2&gt;
+&lt;p&gt;This is for me, but please read along and you might learn something. If you have no idea what &lt;a href="https://opentelemetry.io/"&gt;OpenTelemetry&lt;/a&gt; is though I suggest you start with their own documentation or a YouTube presentation on the concepts. &lt;/p&gt;
+&lt;p&gt;These articles are for me to put into practice the concepts I am learning along the way and to document what I did for my future self when I come back to the lab and find Elastic, Jaeger, Prometheus, Grafana, and the OTEL collector deployed. &lt;/p&gt;
+&lt;h2&gt;What are we aiming for?&lt;/h2&gt;
+&lt;p&gt;Even though the lab is composed of some beefy servers, it still has resource constraints. Any of the infrastructure I deploy will not be high availability, use best practices, or even appropriate security. It's simply a lab environment where I plan to practice the plumbing necessary to get the whole end-to-end setup rolling. &lt;/p&gt;
+&lt;p&gt;While I know services like &lt;a href="https://www.elastic.co/observability/application-performance-monitoring"&gt;Elastic have a full Application Performance Monitoring solution&lt;/a&gt; I plan to simply use it with Kibana for logging and as a database repository for  traces. For trace analysis, I will be using &lt;a href="https://www.jaegertracing.io/"&gt;Jaeger&lt;/a&gt;. For metrics, I have zero experience with &lt;a href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; so I think it's a great opportunity to set up an OTEL collector exporter there. While I use &lt;a href="https://grafana.com/"&gt;Grafana&lt;/a&gt; dashboards at work, I have never had to set one up. So, Grafana will be used for metrics dashboards and alerts. Lastly, a simple Python Flask application should suffice for practicing manual instrumentation with the OTEL SDKs. &lt;/p&gt;
+&lt;p&gt;If all works as expected I think a stretch goal will be to deploy the &lt;a href="https://github.com/open-telemetry/opentelemetry-demo"&gt;OpenTelemetry Demo&lt;/a&gt; which contains a fully instrumented microservices implementation of an Astronomy Shop.&lt;/p&gt;
+&lt;h2&gt;Up next&lt;/h2&gt;
+&lt;p&gt;The next entry in this series will start with a simple single-node Elastic and Kibana deployment. It will include setting up an index for OTEL logs, with an index lifecycle management policy for rolling over the index daily.&lt;/p&gt;</content><category term="observability"></category><category term="python"></category><category term="otel"></category><category term="opentelemetry"></category><category term="elastic"></category></entry><entry><title>Kubernetes Cert Renewal</title><link href="https://androiddrew.github.io/2022/10/kubernetes-cert-renewal/" rel="alternate"></link><published>2022-10-17T00:00:00-04:00</published><updated>2022-10-17T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2022-10-17:/2022/10/kubernetes-cert-renewal/</id><summary type="html">&lt;p&gt;Here in the lab is an old Kubernetes 1.19 cluster that I haven't checked on in a while. I lost access to the 
+kube-apiserver, and it turns out to be caused by an expired cert. Here are the steps I used …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Here in the lab is an old Kubernetes 1.19 cluster that I haven't checked on in a while. I lost access to the 
+kube-apiserver, and it turns out to be caused by an expired cert. Here are the steps I used to identify the issue and 
+resolve it.&lt;/p&gt;
+&lt;h2&gt;I Got a Problem&lt;/h2&gt;
+&lt;p&gt;I am actively studying for the &lt;a href="https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/"&gt;Certified Kubernetes Administrator (CKA)&lt;/a&gt; 
+and one of the tasks you are required to perform during the exam is an upgrade of a cluster. Perfect, I have a Kubernetes 
+1.19 cluster from many moons ago. The only problem is I can't seem to connect to it.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ kubectl get nodes 
+
+The connection to the server 10.0.1.159:6443 was refused - did you specify the right host or port?
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Logging into the management node and checking for I errors I find:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ journalctl -e
+
+Oct 18 01:24:56 kube1 kubelet[696]: E1018 01:24:56.399808     696 kubelet.go:2183] node &amp;quot;kube1&amp;quot; not found 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The kube-apiserver runs inside the &lt;code&gt;kube-system&lt;/code&gt; namespace. Since this cluster uses Docker as the container runtime I 
+can simply check the logs &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ docker ps -a | grep kube-api
+
+d5e5415186ff        607331163122           &amp;quot;kube-apiserver --ad…&amp;quot;   4 minutes ago       Exited (1) 4 minutes ago                        k8s_kube-apiserver_kube-apiserver-kube1_kube-system_e62e9c7b79c44695c4f889ce8dccbe97_8245
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ docker logs k8s_kube-apiserver_kube-apiserver-kube1_kube-system_e62e9c7b79c44695c4f889ce8dccbe97_8245
+
+W1018 01:31:47.390824       1 clientconn.go:1223] grpc: addrConn.createTransport failed to connect to {https://127.0.0.1:2379  &amp;lt;nil&amp;gt; 0 &amp;lt;nil&amp;gt;}. Err :connection error: desc = &amp;quot;transport: authentication handshake failed: x509: certificate has expired or is not yet valid: current time 2022-10-18T01:31:47Z is after 2022-09-24T19:19:54Z&amp;quot;. Reconnecting...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Well, sure enough it seems like the issue with with the TLS cert.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ kubeadm version
+
+kubeadm version: &amp;amp;version.Info{Major:&amp;quot;1&amp;quot;, Minor:&amp;quot;19&amp;quot;, GitVersion:&amp;quot;v1.19.2&amp;quot;, GitCommit:&amp;quot;f5743093fd1c663cb0cbc89748f730662345d44d&amp;quot;, GitTreeState:&amp;quot;clean&amp;quot;, BuildDate:&amp;quot;2020-09-16T13:38:53Z&amp;quot;, GoVersion:&amp;quot;go1.15&amp;quot;, Compiler:&amp;quot;gc&amp;quot;, Platform:&amp;quot;linux/amd64&amp;quot;}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since this is an older version of &lt;code&gt;kubeadm&lt;/code&gt; I need to use the alpha flag to check the certs.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ kubeadm alpha certs check-expiration
+
+W1018 01:38:09.425304  168347 configset.go:348] WARNING: kubeadm cannot validate component configs for API groups [kubelet.config.k8s.io kubeproxy.config.k8s.io]
+CERTIFICATE                EXPIRES                  RESIDUAL TIME   CERTIFICATE AUTHORITY   EXTERNALLY MANAGED
+admin.conf                 Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;                               no
+apiserver                  Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;       ca                      no
+apiserver-etcd-client      Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;       etcd-ca                 no
+apiserver-kubelet-client   Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;       ca                      no
+controller-manager.conf    Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;                               no
+etcd-healthcheck-client    Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;       etcd-ca                 no
+etcd-peer                  Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;       etcd-ca                 no
+etcd-server                Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;       etcd-ca                 no
+front-proxy-client         Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;       front-proxy-ca          no
+scheduler.conf             Sep 24, 2022 19:19 UTC   &amp;lt;invalid&amp;gt;                               no
+
+CERTIFICATE AUTHORITY   EXPIRES                  RESIDUAL TIME   EXTERNALLY MANAGED
+ca                      Sep 21, 2030 01:01 UTC   7y              no
+etcd-ca                 Sep 21, 2030 01:01 UTC   7y              no
+front-proxy-ca          Sep 21, 2030 01:01 UTC   7y              no
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You certainly can tell this is not my primary cluster from the fact that this has been non-operational for a couple 
+weeks without me noticing. Anyway, I need to get this back into a working state before I can work on upgrading it.&lt;/p&gt;
+&lt;h2&gt;Sweet New Certs&lt;/h2&gt;
+&lt;p&gt;Now I was going to go into a long diatribe about creating certs and CSRs, but I decided to just take the easy way out.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ kubeadm alpha certs renew all
+
+[renew] Reading configuration from the cluster...
+[renew] FYI: You can look at this config file with &amp;#39;kubectl -n kube-system get cm kubeadm-config -oyaml&amp;#39;
+[renew] Error reading configuration from the Cluster. Falling back to default configuration
+
+W1018 20:01:29.055667  899153 configset.go:348] WARNING: kubeadm cannot validate component configs for API groups [kubelet.config.k8s.io kubeproxy.config.k8s.io]
+certificate embedded in the kubeconfig file for the admin to use and for kubeadm itself renewed
+certificate for serving the Kubernetes API renewed
+certificate the apiserver uses to access etcd renewed
+certificate for the API server to connect to kubelet renewed
+certificate embedded in the kubeconfig file for the controller manager to use renewed
+certificate for liveness probes to healthcheck etcd renewed
+certificate for etcd nodes to communicate with each other renewed
+certificate for serving etcd renewed
+certificate for the front proxy client renewed
+certificate embedded in the kubeconfig file for the scheduler manager to use renewed
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That's it. That's all you needed. Just remember the version of my &lt;code&gt;kubeadm&lt;/code&gt; was old enough to require using the &lt;code&gt;alpha&lt;/code&gt; 
+subcommand. Don't worry about the cluster configuration at this time, since the kube-apiserver pod is down. I rebooted 
+the machine, copied the admin.conf to my user's home directory, and checked to make sure I could reach the cluster nodes.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ cp /etc/kubernetes/admin.conf ~/admin.conf
+$ kubectl --kubeconfig admin.conf get nodes
+
+NAME    STATUS   ROLES    AGE     VERSION
+kube1   Ready    master   2y25d   v1.19.2
+kube2   Ready    &amp;lt;none&amp;gt;   2y25d   v1.19.2
+kube3   Ready    &amp;lt;none&amp;gt;   2y25d   v1.19.2
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;Time To Say Goodbye&lt;/h2&gt;
+&lt;p&gt;Hope this serves you well in the future when you find yourself logging into that old cluster. &lt;/p&gt;</content><category term="kubernetes"></category><category term="TLS"></category></entry><entry><title>Packaging Python Virtualenvs in ROS Noetic</title><link href="https://androiddrew.github.io/2022/04/ros-catkin-virtualenv-intro/" rel="alternate"></link><published>2022-04-24T00:00:00-04:00</published><updated>2022-04-24T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2022-04-24:/2022/04/ros-catkin-virtualenv-intro/</id><summary type="html">&lt;p&gt;In this tutorial, we will learn how to use Python virtual environments in ROS Noetic packages by building a simple Flask 
+application with catkin_virtualenv. We will cover:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Installation of catkin_virtualenv&lt;/li&gt;
+&lt;li&gt;Building a Flask application as a ROS package&lt;/li&gt;
+&lt;li&gt;Installing our package&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;The …&lt;/h2&gt;</summary><content type="html">&lt;p&gt;In this tutorial, we will learn how to use Python virtual environments in ROS Noetic packages by building a simple Flask 
+application with catkin_virtualenv. We will cover:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Installation of catkin_virtualenv&lt;/li&gt;
+&lt;li&gt;Building a Flask application as a ROS package&lt;/li&gt;
+&lt;li&gt;Installing our package&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;The Problem&lt;/h2&gt;
+&lt;p&gt;The solution for isolating a Python project from the system Python or other projects is to 
+&lt;a href="https://docs.python.org/3/tutorial/venv.html"&gt;use a virtual environment&lt;/a&gt;. Virtualenvs allows us to vary the external dependencies between environments on the same 
+system. The &lt;a href="http://wiki.ros.org/noetic"&gt;Robotic Operating System&lt;/a&gt; (ROS), being a "meta" operating system, is built conceptually on top of another 
+distribution, typically a specific Ubuntu distro. It uses the operating system's package manager to fulfill its 
+dependencies, which means ROS's Python support is provided through the system Python.&lt;/p&gt;
+&lt;p&gt;Unfortunately, ROS has no concept of specifying Python library versions, which means it could be nearly impossible to 
+have a reproducible build. Managing dependencies manually in a system with pip is possible but can easily result in 
+version conflicts and would mean any users of our package will also need to resolve dependencies out of band. Other 
+developers ship their development environments as Docker containers. Thankfully, &lt;a href="https://github.com/locusrobotics/catkin_virtualenv"&gt;catkin_virtualenv&lt;/a&gt; can help the 
+poor Python-dev package a Python virtualenv as part of their ROS package. We will use catkin_virtualenv in this 
+article to build a simple Flask app using artifacts pulled from PyPi at build time. &lt;/p&gt;
+&lt;h3&gt;A note on GPL Licenses&lt;/h3&gt;
+&lt;p&gt;Before we start, I want to note that catkin_virtualenv is a GPL licensed library, but this does not 
+automatically make packages built with catkin_virtualenv GPL. Please see &lt;a href="https://answers.ros.org/question/340978/can-i-use-catkin_virtualenv-to-help-release-a-non-gplv2-package-with-bloom/#398499"&gt;this ROS Answers post&lt;/a&gt; for a more detailed 
+analysis. In short, the required license of a collective work is a function of the licenses of its inputs. If we 
+stick to packaging and importing code with permissive licenses like the MIT, we can use the MIT license for our 
+collective work. &lt;/p&gt;
+&lt;h2&gt;catkin_virtualenv&lt;/h2&gt;
+&lt;p&gt;The &lt;a href="https://github.com/locusrobotics/catkin_virtualenv"&gt;catkin_virtualenv&lt;/a&gt; package adds CMake macros to the catkin build process that allow us to build a virtualenv and 
+pip install Python dependencies from a remote repository. In essence, we can avoid &lt;code&gt;rosdep&lt;/code&gt; and use specific versions of 
+Python libraries in our package. &lt;/p&gt;
+&lt;h3&gt;Installation Option 1: git clone&lt;/h3&gt;
+&lt;p&gt;The &lt;a href="https://github.com/locusrobotics/catkin_virtualenv"&gt;catkin_virtualenv&lt;/a&gt; repo is not a ROS package at the top level, so the typical workflow of cloning the repo into a 
+catkin workspace &lt;code&gt;src/&lt;/code&gt; will result in a build failure. We can achieve the same result by cloning the 
+repository outside of our workspace and symlinking it into our target workspace &lt;code&gt;src/&lt;/code&gt; directory. &lt;/p&gt;
+&lt;p&gt;At the time of writing, the master branch for catkin_virtualenv is on commit id &lt;code&gt;24ab743&lt;/code&gt;. We can explicitly use this 
+commit id for this tutorial. From outside of our catkin workspace, we will clone the repository without an implicit 
+checkout, change directories, and explicitly checkout &lt;code&gt;24ab743&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git&lt;span class="w"&gt; &lt;/span&gt;clone&lt;span class="w"&gt; &lt;/span&gt;-n&lt;span class="w"&gt; &lt;/span&gt;https://github.com/locusrobotics/catkin_virtualenv.git
+&lt;span class="nb"&gt;cd&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;catkin_virtualenv&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;git&lt;span class="w"&gt; &lt;/span&gt;checkout&lt;span class="w"&gt; &lt;/span&gt;24ab743
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we can symlink this package into our workspace. In my case, I cloned catkin_virtualenv into &lt;code&gt;~/experiments&lt;/code&gt;, and 
+symlinked it to a catkin workspace in &lt;code&gt;~/experiments/ros_ws/src/&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;ln&lt;span class="w"&gt; &lt;/span&gt;-s&lt;span class="w"&gt; &lt;/span&gt;~/experiments/catkin_virtualenv/catkin_virtualenv/&lt;span class="w"&gt; &lt;/span&gt;~/experiments/ros_ws/src/
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Back in our workspace, we can now run &lt;code&gt;catkin_make&lt;/code&gt; or &lt;code&gt;catkin_make_isolated&lt;/code&gt;(See &lt;a href="https://www.ros.org/reps/rep-0134.html"&gt;REP 134&lt;/a&gt;). I prefer the greater 
+control provided by &lt;code&gt;catkin_make_isolated&lt;/code&gt;. &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;catkin_make_isolated
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If this is successful, we should also check to ensure that our system meets the package's dependencies.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;rosdep&lt;span class="w"&gt; &lt;/span&gt;check&lt;span class="w"&gt; &lt;/span&gt;catkin_virtualenv
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Technically, we have not installed the package at this point, but it will be available under &lt;code&gt;./devel_isolated&lt;/code&gt; and 
+usable developing our &lt;code&gt;simple_flask&lt;/code&gt; package. I leave this as a development package to demonstrate that it is 
+not needed for execution later.&lt;/p&gt;
+&lt;h3&gt;Installation Option 2: Bloom Artifact&lt;/h3&gt;
+&lt;p&gt;The Bloom-built artifact can be used if an older version is acceptable. At the time of writing, this artifact was built 
+with version 0.6.1 of catkin_virtualenv. In the above git-based installation, the master branch is post 0.8.0 release. 
+Your mileage may vary.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;rosdep&lt;span class="w"&gt; &lt;/span&gt;resolve&lt;span class="w"&gt; &lt;/span&gt;catkin_virtualenv
+
+&lt;span class="c1"&gt;#apt&lt;/span&gt;
+ros-noetic-catkin-virtualenv
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo&lt;span class="w"&gt; &lt;/span&gt;apt&lt;span class="w"&gt; &lt;/span&gt;install&lt;span class="w"&gt; &lt;/span&gt;ros-noetic-catkin-virtualenv
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This command will install &lt;code&gt;catkin_virtualenv&lt;/code&gt; under&lt;code&gt;/opt/ros/noetic/&lt;/code&gt;, so it will be globally available to all catkin 
+workspaces on the system.&lt;/p&gt;
+&lt;h3&gt;Our catkin_virtualenv Experiment&lt;/h3&gt;
+&lt;p&gt;If we attempted to use the system package &lt;code&gt;python3-flask&lt;/code&gt; in our ROS node, we'd find version 1.1.x as the most recent 
+version. As a simple example, let's create a package that launches a Flask 2.x web application with &lt;code&gt;catkin_virtualenv&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Starting from the catkin workspace &lt;code&gt;src/&lt;/code&gt; directory, create a new package with &lt;code&gt;catkin_virtualenv&lt;/code&gt; as a dependency.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;catkin_create_pkg&lt;span class="w"&gt; &lt;/span&gt;simple_flask&lt;span class="w"&gt; &lt;/span&gt;catkin_virtualenv
+&lt;span class="nb"&gt;cd&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;simple_flask
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now, create a pip &lt;code&gt;requirements.txt&lt;/code&gt; file with our desired Flask version.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;simple_flask/requirements.txt&lt;/em&gt;&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;flask==2.1.1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, we need to link this requirements file with the catkin build process. This task is accomplished by adding 
+catkin_virtualenv to our &lt;code&gt;package.xml&lt;/code&gt; and referencing our &lt;code&gt;requirements.txt&lt;/code&gt; using the newly available 
+&lt;code&gt;pip_requirements&lt;/code&gt; section in the &lt;code&gt;export&lt;/code&gt; tag.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;simple_flask/package.xml&lt;/em&gt;&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="cp"&gt;&amp;lt;?xml version=&amp;quot;1.0&amp;quot;?&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="na"&gt;format=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;2&amp;quot;&lt;/span&gt;&lt;span class="nt"&gt;&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;name&amp;gt;&lt;/span&gt;simple_flask&lt;span class="nt"&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;version&amp;gt;&lt;/span&gt;0.1.0&lt;span class="nt"&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;description&amp;gt;&lt;/span&gt;The&lt;span class="w"&gt; &lt;/span&gt;simple_flask&lt;span class="w"&gt; &lt;/span&gt;package&lt;span class="nt"&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;maintainer&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="na"&gt;email=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;drew@androiddrew.com&amp;quot;&lt;/span&gt;&lt;span class="nt"&gt;&amp;gt;&lt;/span&gt;Drew&lt;span class="w"&gt; &lt;/span&gt;Bednar&lt;span class="nt"&gt;&amp;lt;/maintainer&amp;gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;license&amp;gt;&lt;/span&gt;MIT&lt;span class="nt"&gt;&amp;lt;/license&amp;gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;buildtool_depend&amp;gt;&lt;/span&gt;catkin&lt;span class="nt"&gt;&amp;lt;/buildtool_depend&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;build_depend&amp;gt;&lt;/span&gt;catkin_virtualenv&lt;span class="nt"&gt;&amp;lt;/build_depend&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;build_export_depend&amp;gt;&lt;/span&gt;catkin_virtualenv&lt;span class="nt"&gt;&amp;lt;/build_export_depend&amp;gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;export&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;pip_requirements&amp;gt;&lt;/span&gt;requirements.txt&lt;span class="nt"&gt;&amp;lt;/pip_requirements&amp;gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;/export&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;/package&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For our Flask app, we will create a single route app that displays the Flask version. We must 
+include the &lt;code&gt;#!/usr/bin/env python3&lt;/code&gt; shebang line for our Python scripts. During the build, catkin_virtualenv will 
+create wrapper scripts that will use the bundled virtualenv instead of the system Python libraries for execution. &lt;/p&gt;
+&lt;p&gt;&lt;em&gt;simple_flask/nodes/flask_node.py&lt;/em&gt;&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="ch"&gt;#!/usr/bin/env python3&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;flask&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Flask&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;__version__&lt;/span&gt;
+
+&lt;span class="n"&gt;app&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Flask&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="vm"&gt;__name__&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="nd"&gt;@app&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;route&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;/&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;index&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Flask version: &lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="n"&gt;__version__&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;
+
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="vm"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;app&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;host&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;0.0.0.0&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;port&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;5000&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We need to modify the &lt;code&gt;CMakeLists.txt&lt;/code&gt; to find our package's single node and bundle the virtualenv using the 
+&lt;code&gt;catkin_generate_virtualenv&lt;/code&gt;. See the &lt;a href="https://github.com/locusrobotics/catkin_virtualenv#additional-cmake-options"&gt;additional CMake options&lt;/a&gt; section of the README.md for more options.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;simple_flask/CMakeLists.txt&lt;/em&gt;&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nb"&gt;cmake_minimum_required&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;VERSION&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;3.0.2&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;project&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;simple_flask&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="nb"&gt;find_package&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;catkin&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;REQUIRED&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;COMPONENTS&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="s"&gt;catkin_virtualenv&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="nb"&gt;catkin_generate_virtualenv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="s"&gt;PYTHON_INTERPRETER&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;python3&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="nb"&gt;catkin_package&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+&lt;span class="nb"&gt;include_directories&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;include&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;catkin_INCLUDE_DIRS&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="nb"&gt;install&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;FILES&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;requirements.txt&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="s"&gt;DESTINATION&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;CATKIN_PACKAGE_SHARE_DESTINATION&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;catkin_install_python&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;PROGRAMS&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="s"&gt;nodes/flask_node.py&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="s"&gt;DESTINATION&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;CATKIN_PACKAGE_BIN_DESTINATION&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We are now ready to run &lt;code&gt;catkin_make_isolated&lt;/code&gt; again in our workspace. This command will build our &lt;code&gt;simple_flask&lt;/code&gt; 
+package in the &lt;code&gt;./devel_isolated&lt;/code&gt; directory using the build of catkin_virtualenv from the previous step.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;catkin_make_isolated
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We can check and see that, indeed we now have a virtualenv associated with our &lt;code&gt;simple_flask&lt;/code&gt; package and that it 
+contains its own isolated sites-packages. &lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;ls&lt;span class="w"&gt; &lt;/span&gt;./devel_isolated/simple_flask/share/simple_flask/venv/lib/python3.8/site-packages
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We can launch our node using &lt;code&gt;rosrun&lt;/code&gt;. This will start the Flask app using the Werkzeug development server and bind 
+to port &lt;code&gt;5000&lt;/code&gt; of our host.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;rosrun&lt;span class="w"&gt; &lt;/span&gt;simple_flask&lt;span class="w"&gt; &lt;/span&gt;flask_node.py
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The above command was not preceded by starting &lt;code&gt;roscore&lt;/code&gt;, but that's fine since this entire experiment is simply about 
+packaging the Python dependencies. &lt;/p&gt;
+&lt;h2&gt;Installing our new package&lt;/h2&gt;
+&lt;p&gt;In this last step, we will prove that this package is installable in the same manner as other catkin-built packages.
+We will install it to a location outside of our catkin workspace and run the above &lt;code&gt;rosrun&lt;/code&gt; command 
+again.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;mkdir&lt;span class="w"&gt; &lt;/span&gt;../demo-install
+catkin_make_isolated&lt;span class="w"&gt; &lt;/span&gt;--install&lt;span class="w"&gt; &lt;/span&gt;--install-space&lt;span class="w"&gt; &lt;/span&gt;../demo-install
+&lt;span class="nb"&gt;cd&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;../demo-install
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, we will replace &lt;code&gt;ROS_PACKAGE_PATH&lt;/code&gt; since it includes references to our workspace. Be sure to replace 
+&lt;code&gt;&amp;lt;your_username&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nb"&gt;unset&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;ROS_PACKAGE_PATH
+&lt;span class="nb"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;ROS_PACKAGE_PATH&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/home/&amp;lt;your_username&amp;gt;/experiments/demo-install/share:/opt/ros/noetic/share
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;All that's left now is to &lt;code&gt;rosrun&lt;/code&gt; the our package again&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;rosrun&lt;span class="w"&gt; &lt;/span&gt;simple_flask&lt;span class="w"&gt; &lt;/span&gt;flask_node.py
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;Closing thoughts&lt;/h2&gt;
+&lt;p&gt;We should now know how to build our own ROS nodes with catkin_virtualenv. I plan to expand my own 
+projects to leverage the &lt;a href="https://github.com/jazzband/pip-tools/"&gt;pip-tools&lt;/a&gt; functionality to create lock files for my Python dependencies. Additionally, I will 
+be investigating how to build .deb archives for these packages. &lt;/p&gt;
+&lt;p&gt;In a follow on article, we will continue this journey by using catkin_virtualenv to build &lt;a href="https://github.com/locusrobotics/aiorospy"&gt;aiorospy&lt;/a&gt; as a dependency for 
+driving a &lt;a href="https://mjbots.com/"&gt;Moteus&lt;/a&gt; brushless DC motor controller in ROS. Finally, thank you &lt;a href="https://locusrobotics.com/"&gt;Locus Robotics&lt;/a&gt;, Paul Bovbel, and 
+contributors for making such a great open-source package. &lt;/p&gt;</content><category term="ros"></category><category term="robotics"></category><category term="python"></category></entry><entry><title>Business Goals Update #2</title><link href="https://androiddrew.github.io/2022/02/feb-15-business-goals-update/" rel="alternate"></link><published>2022-02-15T00:00:00-05:00</published><updated>2022-02-15T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2022-02-15:/2022/02/feb-15-business-goals-update/</id><summary type="html">&lt;h1&gt;Where is the coffee?&lt;/h1&gt;
+&lt;p&gt;My schedule has recently changed to accommodate caring for my daughter in the mornings. During this adjustment I 
+have found myself waking up roughly at 5:30 AM. Any gains I have made in the past two weeks …&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Where is the coffee?&lt;/h1&gt;
+&lt;p&gt;My schedule has recently changed to accommodate caring for my daughter in the mornings. During this adjustment I 
+have found myself waking up roughly at 5:30 AM. Any gains I have made in the past two weeks have been during the short 
+quiet period before anyone else wakes. I guess I understand now why so many founders have a ridiculously early morning.&lt;/p&gt;
+&lt;h2&gt;Manager Update&lt;/h2&gt;
+&lt;h3&gt;Business Model Exploration&lt;/h3&gt;
+&lt;p&gt;I did less research than I intended on my action item to research five form builder tools. During the second trial 
+signup I think I realized that I am not trying to build a form builder and a CMS. My initial idea aligns more with the 
+"ReSTful APIs as a Service" offering. Naturally, I could add a form builder as an additional product that utilizes the 
+platform I am envisioning. &lt;/p&gt;
+&lt;p&gt;On to a new action item, "Research three ReSTful API as a Service offerings in the next 14 days."&lt;/p&gt;
+&lt;h3&gt;Books&lt;/h3&gt;
+&lt;p&gt;I finished &lt;a href="https://www.startupsfortherestofus.com/"&gt;Startups for the Rest of Us&lt;/a&gt; and have now moved on to &lt;a href="https://www.penguinrandomhouse.com/books/319121/traction-by-gabriel-weinberg-and-justin-mares/"&gt;Traction&lt;/a&gt;. Gabriel Weinberg, has great insight into 
+the mind of a developer/founder and I really appreciate the concrete examples he brings in to support the "Bullseye" 
+framework for startup marketing. Six chapters in and I ordered two copies for my master minds members. &lt;/p&gt;
+&lt;h2&gt;Developer Update&lt;/h2&gt;
+&lt;h3&gt;Stripe&lt;/h3&gt;
+&lt;p&gt;Technically, I have a &lt;a href="https://stripe.com/docs"&gt;Stripe&lt;/a&gt; account now, which means I can accept basic payments, create subscriptions, or send off 
+invoices. They have an excellent sandbox account for testing all of these features. With the newly minted account 
+I decided to run through the &lt;a href="https://testdriven.io/blog/accepting-payments-with-stripe-vuejs-and-flask/"&gt;Accepting Payments with Stripe, Vue.js, and Flask&lt;/a&gt; tutorial on &lt;a href="https://testdriven.io/"&gt;Testdriven.io&lt;/a&gt;. It only 
+covered the basics of the Checkout API, but it was enough to give me an idea of how to integrate with thier platform.&lt;/p&gt;
+&lt;h3&gt;FastAPI&lt;/h3&gt;
+&lt;p&gt;Last update I mentioned learning &lt;a href="https://swagger.io/specification/"&gt;OpenAPI Schema&lt;/a&gt;. There are a number of Python web frameworks that will autogenerate 
+OpenAPI schemas from your code. My personal favorite is &lt;a href="https://moltenframework.com/"&gt;Molten&lt;/a&gt;, but unfortunately it came a little too late to the party
+and it wasn't the "async" hotness that everyone was looking for in the Python echo system. So, I jumped on the bandwagon 
+and gave &lt;a href="https://fastapi.tiangolo.com/"&gt;FastAPI&lt;/a&gt; a spin, once again hitting up &lt;a href="https://testdriven.io/blog/fastapi-sqlmodel/"&gt;FastAPI with Async SQLAlchemy, SQLModel, and Alembic&lt;/a&gt; on Testdriven.&lt;/p&gt;
+&lt;p&gt;In all honesty, it's not a bad framework. There seems to be some dissatisfaction in its community with how the project 
+is run. The bottleneck being the single maintainer &lt;a href="https://github.com/tiangolo"&gt;Sebastián Ramírez&lt;/a&gt;. It's his right though, FastAPI is his framework 
+and he can do whatever the hell he wants to with it. &lt;/p&gt;</content><category term="goals"></category><category term="business"></category></entry><entry><title>Business Goals Update #1</title><link href="https://androiddrew.github.io/2022/02/jan-31-business-goals-update/" rel="alternate"></link><published>2022-02-01T00:00:00-05:00</published><updated>2022-02-01T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2022-02-01:/2022/02/jan-31-business-goals-update/</id><summary type="html">&lt;h2&gt;Oops&lt;/h2&gt;
+&lt;p&gt;Well, nothing like starting off your first goals update late. Unfortunately, a herniated disc and an almost manic 
+reaction to Prednisone have delayed this one. While I intend to keep to my schedule, life may happen.&lt;/p&gt;
+&lt;h2&gt;Manager Update&lt;/h2&gt;
+&lt;h3&gt;Books&lt;/h3&gt;
+&lt;p&gt;I don't …&lt;/p&gt;</summary><content type="html">&lt;h2&gt;Oops&lt;/h2&gt;
+&lt;p&gt;Well, nothing like starting off your first goals update late. Unfortunately, a herniated disc and an almost manic 
+reaction to Prednisone have delayed this one. While I intend to keep to my schedule, life may happen.&lt;/p&gt;
+&lt;h2&gt;Manager Update&lt;/h2&gt;
+&lt;h3&gt;Books&lt;/h3&gt;
+&lt;p&gt;I don't want to consider reading business books an accomplishment, but part of this journey is getting an education in 
+startups. There are two books on the reading list &lt;a href="https://startupbook.net/"&gt;Start Small Stay Small&lt;/a&gt; by Rob Walling, and &lt;a href="https://www.penguinrandomhouse.com/books/319121/traction-by-gabriel-weinberg-and-justin-mares/"&gt;Traction&lt;/a&gt; By Gabriel 
+Weinberg and Justin Mares. &lt;/p&gt;
+&lt;p&gt;Start Small Stay Small thankfully does not have a lot of fluff. Unfortunately, a lot of the companies and services 
+it specifically references are outdated. This isn't a problem as long as you can find a comparable service. The business 
+guidance is still relevant to small-time SaaS, and really if you listen to &lt;a href="https://www.startupsfortherestofus.com/"&gt;Startups for the Rest of Us&lt;/a&gt; you can tease 
+some verbal updates to the material. I'm approximately 70% through the book.&lt;/p&gt;
+&lt;p&gt;The core idea this book is helping me realize is that the success or failure of any small SaaS startup can hinge more on the 
+founder's marketing research and efforts than anything else.&lt;/p&gt;
+&lt;h3&gt;Master Minds&lt;/h3&gt;
+&lt;p&gt;On 01/28/2022 I had my first mastermind session with two friends from Charlotte NC, who are also looking for projects or 
+opportunities. We have a Discord server for async thoughts, but hopefully, we can maintain at least a monthly video call. 
+I took an action item to research five competitors in the no-code/low-code form builder space.&lt;/p&gt;
+&lt;p&gt;The market for form builders may be a little crowded, but I believe there could be a niche worth pursuing based on my 
+personal experiences working for Kellogg Company. I saw essentially the same application built at least five times in 
+three years. Each time the solution was delivered by overpriced consultants, like Wipro or Accenture. I can't hinge a 
+business strategy on selling to a former employer, but if they had the pain most likely other large organizations do 
+too.&lt;/p&gt;
+&lt;h2&gt;Developer Update&lt;/h2&gt;
+&lt;h3&gt;Technical Skills&lt;/h3&gt;
+&lt;p&gt;The only developer update I have is that I completed a short intro course on &lt;a href="https://swagger.io/specification/"&gt;OpenAPI Schema&lt;/a&gt;. This will be useful in 
+prototyping any potential Restful API services for future products.&lt;/p&gt;</content><category term="goals"></category><category term="business"></category></entry><entry><title>The 2022 Business Goal</title><link href="https://androiddrew.github.io/2022/01/2022-business-goal/" rel="alternate"></link><published>2022-01-15T00:00:00-05:00</published><updated>2022-01-15T00:00:00-05:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2022-01-15:/2022/01/2022-business-goal/</id><summary type="html">&lt;p&gt;I have become a big fan of Rob Walling's &lt;a href="https://www.startupsfortherestofus.com/"&gt;Startups for the Rest of Us&lt;/a&gt; and Sam &amp;amp; Shaan's &lt;a href="https://www.mfmpod.com/"&gt;My First Million&lt;/a&gt; podcasts. In 
+particular, I find Rob Walling's focus on "independent" software startups intriguing. These operations stand apart from 
+Venture Capital backed …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I have become a big fan of Rob Walling's &lt;a href="https://www.startupsfortherestofus.com/"&gt;Startups for the Rest of Us&lt;/a&gt; and Sam &amp;amp; Shaan's &lt;a href="https://www.mfmpod.com/"&gt;My First Million&lt;/a&gt; podcasts. In 
+particular, I find Rob Walling's focus on "independent" software startups intriguing. These operations stand apart from 
+Venture Capital backed businesses by being bootstrap funded by their founders, or with a minimal amount of seed/angel 
+funding. Goals can range from supplementing a founder’s income to full-on seven or eight-figure businesses with multiple 
+employees. &lt;/p&gt;
+&lt;p&gt;If you’re a developer who listens to a few episodes of these shows, you will start to think “I want that” or “I can do 
+that”. Daydreams will fill your head of leaving the 9 to 5 and living up life. Naturally, it’s not enough to daydream, 
+we have to actually act to make this a reality. With that in mind, I present my 2022 goal and how I intend to be 
+accountable for achieving it. &lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;“In the year 2022, I will establish a bootstrapped startup that will achieve $2,000 monthly reoccurring revenue(MRR) 
+with a take-home value(after taxes/expenses) of $1,000 or more. I will also only invest up to $3,000 of my own money to 
+achieve this outcome.”&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Do notice I have not pegged myself into only software. I believe a software startup though would have the greatest 
+growth potential for a man with my skills, and will probably be my primary focus. I have decided that a smaller dollar 
+goal would not be a success in my eyes, but I am not naive enough to think that I could achieve a better outcome than 
+this in my first year. I want to emphasize too that this needs to be MRR. In the past, I have had ideas of running a 
+Kickstarter to meet an ill-defined income goal. One-time sales of a product or piece of content will be excluded unless 
+it is coupled with a recurring revenue stream.&lt;/p&gt;
+&lt;p&gt;My starting point does not include a business idea. I know what you are thinking, but the quote “Motivation comes after 
+starting.” is at the forefront of my thoughts on this matter. Waiting for inspiration or the right idea has never worked 
+for me in the past. Setting this goal is my first step, finding the right niche idea is next, then I will need to prove 
+a market exists for this product or service.&lt;/p&gt;
+&lt;p&gt;To remain accountable I will provide updates on my progress to a family member and friend in addition to public updates 
+here on this blog. The frequency of updates will be bi-weekly.&lt;/p&gt;</content><category term="goals"></category><category term="business"></category></entry><entry><title>Build Micropython for the Teensy 4.0/4.1</title><link href="https://androiddrew.github.io/2021/07/build-micropython-for-teensy-4x/" rel="alternate"></link><published>2021-07-19T00:00:00-04:00</published><updated>2021-07-25T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2021-07-19:/2021/07/build-micropython-for-teensy-4x/</id><summary type="html">&lt;h2&gt;Micropython on the Teensy!&lt;/h2&gt;
+&lt;p&gt;Finally, some minimal support for the Teensy 4.x processor was added in the 1.16 version of Micropython. Daily binaries 
+are provided at &lt;a href="https://micropython.org/download/all/"&gt;https://micropython.org/download/all/&lt;/a&gt;, but these won't contain 
+features under construction. This article …&lt;/p&gt;</summary><content type="html">&lt;h2&gt;Micropython on the Teensy!&lt;/h2&gt;
+&lt;p&gt;Finally, some minimal support for the Teensy 4.x processor was added in the 1.16 version of Micropython. Daily binaries 
+are provided at &lt;a href="https://micropython.org/download/all/"&gt;https://micropython.org/download/all/&lt;/a&gt;, but these won't contain 
+features under construction. This article will show you how to compile the 
+&lt;a href="https://github.com/micropython/micropython/tree/master/ports/mimxrt"&gt;mimxrt port&lt;/a&gt; from source, and will be useful for 
+those who want to experiment with other people's branches or attempt to implement a feature themselves. &lt;/p&gt;
+&lt;h2&gt;Setting up the dependencies&lt;/h2&gt;
+&lt;p&gt;These instructions were performed using a fresh install of Ubuntu 20.04 Focal-fossa.&lt;/p&gt;
+&lt;p&gt;Clone the Micropython repo.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git clone https://github.com/micropython/micropython.git
+cd micropython
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Ensure core micropython dependencies are installed on your system.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo apt-get install build-essential libffi-dev git pkg-config
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Installing the ARM Developer Toolchain&lt;/h3&gt;
+&lt;p&gt;Since the Teensy is an ARM processor we will need to install the GNU Arm Embedded Toolchain.&lt;/p&gt;
+&lt;h4&gt;The easier way&lt;/h4&gt;
+&lt;p&gt;There are some older packages you can still install from the package archives, but recent tools will have to come from 
+the toolchain maintainer’s website. See the next section for manual install instructions.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo apt install libnewlib-arm-none-eabi binutils-arm-none-eabi gcc-arm-none-eabi
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4&gt;The new "harder" way&lt;/h4&gt;
+&lt;p&gt;There is no maintained PPA anymore for the ARM embedded toolchain, you have to install it manually from the
+&lt;a href="https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads"&gt;Arm Developer website&lt;/a&gt;. The binaries provided by the three older packages listed above were all present in the bin 
+directory of the provided archive. &lt;/p&gt;
+&lt;p&gt;Download the latest Linux x86_64 tarball, check the md5, and untar into a directory. You can add that directory to 
+your PATH and be done, or you can do something like below.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo tar xjf &amp;lt;your tarball&amp;gt; -C /usr/share/ 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Create symlinks for all the binaries to make them accessible system-wide.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;GCC_ARM_VERSION&lt;span class="w"&gt; &lt;/span&gt;=&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;&amp;lt;gcc&lt;/span&gt;&lt;span class="err"&gt;-arm-none-eabi-your-version&lt;/span&gt;&lt;span class="nt"&gt;&amp;gt;&lt;/span&gt;
+
+sudo&lt;span class="w"&gt; &lt;/span&gt;ln&lt;span class="w"&gt; &lt;/span&gt;-s&lt;span class="w"&gt; &lt;/span&gt;/usr/share/&lt;span class="cp"&gt;${&lt;/span&gt;&lt;span class="n"&gt;GCC_ARM_VERSION&lt;/span&gt;&lt;span class="cp"&gt;}&lt;/span&gt;/bin/arm-none-eabi-gcc&lt;span class="w"&gt; &lt;/span&gt;/usr/bin/arm-none-eabi-gcc&lt;span class="w"&gt; &lt;/span&gt;
+sudo&lt;span class="w"&gt; &lt;/span&gt;ln&lt;span class="w"&gt; &lt;/span&gt;-s&lt;span class="w"&gt; &lt;/span&gt;/usr/share/&lt;span class="cp"&gt;${&lt;/span&gt;&lt;span class="n"&gt;GCC_ARM_VERSION&lt;/span&gt;&lt;span class="cp"&gt;}&lt;/span&gt;/bin/arm-none-eabi-g++&lt;span class="w"&gt; &lt;/span&gt;/usr/bin/arm-none-eabi-g++
+sudo&lt;span class="w"&gt; &lt;/span&gt;ln&lt;span class="w"&gt; &lt;/span&gt;-s&lt;span class="w"&gt; &lt;/span&gt;/usr/share/&lt;span class="cp"&gt;${&lt;/span&gt;&lt;span class="n"&gt;GCC_ARM_VERSION&lt;/span&gt;&lt;span class="cp"&gt;}&lt;/span&gt;/bin/arm-none-eabi-gdb&lt;span class="w"&gt; &lt;/span&gt;/usr/bin/arm-none-eabi-gdb
+sudo&lt;span class="w"&gt; &lt;/span&gt;ln&lt;span class="w"&gt; &lt;/span&gt;-s&lt;span class="w"&gt; &lt;/span&gt;/usr/share/&lt;span class="cp"&gt;${&lt;/span&gt;&lt;span class="n"&gt;GCC_ARM_VERSION&lt;/span&gt;&lt;span class="cp"&gt;}&lt;/span&gt;/bin/arm-none-eabi-size&lt;span class="w"&gt; &lt;/span&gt;/usr/bin/arm-none-eabi-size
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;There may be some dependencies missing after install. If you encounter issues this should resolve them.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo apt install libncurses-dev
+sudo ln -s /usr/lib/x86_64-linux-gnu/libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5
+sudo ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;With that, the following commands should now work.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;arm-none-eabi-gcc --version
+arm-none-eabi-g++ --version
+arm-none-eabi-gdb --version
+arm-none-eabi-size --version
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Build the Micropython cross-compiler&lt;/h3&gt;
+&lt;p&gt;From the micropython top-level directory.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;cd mpy-cross
+make
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We are now ready to build.&lt;/p&gt;
+&lt;h2&gt;Building the Teensy port&lt;/h2&gt;
+&lt;p&gt;Back at the micropython top-level directory, head over to the mimxrt port and run the make magic.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;cd ./ports/mimxrt/
+make submodules
+make
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If it succeeds you should see something like this:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;LINK&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;build&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;TEENSY40&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;firmware&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;elf&lt;/span&gt;
+&lt;span class="n"&gt;Memory&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;region&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="n"&gt;Used&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Size&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;Region&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Size&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;&lt;span class="n"&gt;age&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Used&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nl"&gt;m_flash_config:&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="mh"&gt;512&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;B&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="mh"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="mf"&gt;12.50&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;           &lt;/span&gt;&lt;span class="nl"&gt;m_ivt:&lt;/span&gt;&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="mh"&gt;48&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;B&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="mh"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mf"&gt;1.17&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nl"&gt;m_interrupts:&lt;/span&gt;&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="mh"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="mh"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="mf"&gt;100.00&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="nl"&gt;m_text:&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mh"&gt;266424&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;B&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mh"&gt;1015&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="mf"&gt;25.63&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;           &lt;/span&gt;&lt;span class="nl"&gt;m_vfs:&lt;/span&gt;&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="mh"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;GB&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mh"&gt;1020&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mf"&gt;0.00&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="nl"&gt;m_reserved:&lt;/span&gt;&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="mh"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;GB&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="mh"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mf"&gt;0.00&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="nl"&gt;m_itcm:&lt;/span&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="mh"&gt;1872&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;B&lt;/span&gt;&lt;span class="w"&gt;       &lt;/span&gt;&lt;span class="mh"&gt;128&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mf"&gt;1.43&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="nl"&gt;m_dtcm:&lt;/span&gt;&lt;span class="w"&gt;       &lt;/span&gt;&lt;span class="mh"&gt;42952&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;B&lt;/span&gt;&lt;span class="w"&gt;       &lt;/span&gt;&lt;span class="mh"&gt;128&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="mf"&gt;32.77&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="nl"&gt;m_ocrm:&lt;/span&gt;&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="mh"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;GB&lt;/span&gt;&lt;span class="w"&gt;       &lt;/span&gt;&lt;span class="mh"&gt;768&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;KB&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="mf"&gt;0.00&lt;/span&gt;&lt;span class="o"&gt;%&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="n"&gt;text&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="n"&gt;bss&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="n"&gt;dec&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="n"&gt;hex&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;
+&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;269880&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="mh"&gt;292&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="mh"&gt;40904&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="mh"&gt;311076&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="mh"&gt;4&lt;/span&gt;&lt;span class="n"&gt;bf24&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;build&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;TEENSY40&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;firmware&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;elf&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;Flashing your sweet new binary&lt;/h2&gt;
+&lt;p&gt;We can use the &lt;a href="https://github.com/PaulStoffregen/teensy_loader_cli"&gt;teensy_loader_cli&lt;/a&gt; tool to upload our .hex file to 
+our Teensy 4.x board.&lt;/p&gt;
+&lt;p&gt;First, let's install its dependencies.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo apt install libusb-dev
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Clone the teensy_loader_cli repo to a workspace, build, and copy the binary somewhere in your path.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;git&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;clone&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;https&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="n"&gt;github&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;PaulStoffregen&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;teensy_loader_cli&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;git&lt;/span&gt;
+&lt;span class="n"&gt;cd&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;teensy_loader_cli&lt;/span&gt;
+&lt;span class="n"&gt;make&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
+&lt;span class="n"&gt;sudo&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;cp&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;teensy_loader_cli&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;usr&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;local&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bin&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Check to make sure it works and supports our target board.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;teensy_loader_cli&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="n"&gt;list&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;mcus&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;To avoid having to use sudo to flash a teensy we can update our udev rules.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;cd&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;~&lt;/span&gt;
+&lt;span class="n"&gt;wget&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;https&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="n"&gt;www&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pjrc&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;teensy&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="mi"&gt;00&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;teensy&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;rules&lt;/span&gt;
+&lt;span class="n"&gt;sudo&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;cp&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;teensy&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;rules&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;etc&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;udev&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;rules&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;span class="n"&gt;sudo&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;udevadm&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;control&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="n"&gt;reload&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;rules&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Finally! We can flash the board. Go back to your build folder.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;cd micropython/ports/mimxrt/build-TEENSY40
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Kick off the teensy loader. The &lt;code&gt;-w&lt;/code&gt; flag will wait for a teensy in bootloader mode to connect.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;teensy_loader_cli&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="n"&gt;mcu&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;TEENSY40&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;w&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;firmware&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;hex&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now press the button on the teensy. Once it's done loading we can use a program like minicom to connect to the REPL.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;minicom -D /dev/ttyACM0 -b 115200
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Excellent, let's go for a Hello world:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;utime&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;machine&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Pin&lt;/span&gt;
+
+&lt;span class="n"&gt;p13&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Pin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;13&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Pin&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;OUT&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;while&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;True&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;p13&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;on&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;utime&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;p13&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;off&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;utime&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You should now see the onboard LED blinking on you board! Alright, but we aren't done yet. We have to upload code to 
+our board. Personally, I prefer a cli tool and the &lt;code&gt;ampy&lt;/code&gt; program foot's the bill. In a python virtualenv let's 
+install &lt;code&gt;ampy&lt;/code&gt;, copy our blinking code into a &lt;code&gt;main.py&lt;/code&gt;, then upload it to the Teensy.&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;python3 -m venv env
+source env/bin/activate
+pip install adafruit-ampy
+# Copy your code to a main.py file
+ampy -p /dev/ttyACM0 -b 115200 put main.py
+ampy -p /dev/ttyACM0 -b 115200 ls
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now reset your board.&lt;/p&gt;
+&lt;h2&gt;In closing&lt;/h2&gt;
+&lt;p&gt;We have done the whole round trip on this one. We have built a micropython port from source, flashed it to our teensy 
+board, confirmed it was working with a blinky program in the REPL, then uploaded a &lt;code&gt;main.py&lt;/code&gt; file so it will always 
+blink when powered. The world is now yours. Go forth and do great things.&lt;/p&gt;
+&lt;h2&gt;Resources&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://docs.micropython.org/en/latest/develop/gettingstarted.html"&gt;Micropython Getting Started&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads"&gt;Arm Developer website&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://learn.sparkfun.com/tutorials/how-to-load-micropython-on-a-microcontroller-board/teensy-3x"&gt;How to Load MicroPython on a Microcontroller Board&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;https://askubuntu.com/questions/1243252/how-to-install-arm-none-eabi-gdb-on-ubuntu-20-04-lts-focal-fossa&lt;/li&gt;
+&lt;/ul&gt;</content><category term="microcontroller"></category><category term="microcontroller"></category><category term="micropython"></category><category term="teensy"></category></entry><entry><title>The Pupper Robot Build</title><link href="https://androiddrew.github.io/2020/06/pupper-pt1/" rel="alternate"></link><published>2020-06-21T00:00:00-04:00</published><updated>2020-06-21T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2020-06-21:/2020/06/pupper-pt1/</id><summary type="html">&lt;h2&gt;The Standford Pupper&lt;/h2&gt;
+&lt;p&gt;&lt;img alt="Stanford Pupper" src="https://androiddrew.github.io/images/pupper-standing-lg.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;I subscribe to the most excellent news letter &lt;a href="https://weeklyrobotics.com/"&gt;Weekly Robotics&lt;/a&gt; and 
+&lt;a href="https://weeklyrobotics.com/weekly-robotics-89"&gt;issue #89&lt;/a&gt; happened to feature a fascinating open source quadruped 
+called the &lt;a href="https://stanfordstudentrobotics.org/pupper"&gt;Pupper&lt;/a&gt;. Consider me smitten. A few months before 
+I had purchased &lt;a href="http://hades.mech.northwestern.edu/index.php/Modern_Robotics"&gt;Modern Robotics&lt;/a&gt;, but couldn't relate …&lt;/p&gt;</summary><content type="html">&lt;h2&gt;The Standford Pupper&lt;/h2&gt;
+&lt;p&gt;&lt;img alt="Stanford Pupper" src="https://androiddrew.github.io/images/pupper-standing-lg.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;I subscribe to the most excellent news letter &lt;a href="https://weeklyrobotics.com/"&gt;Weekly Robotics&lt;/a&gt; and 
+&lt;a href="https://weeklyrobotics.com/weekly-robotics-89"&gt;issue #89&lt;/a&gt; happened to feature a fascinating open source quadruped 
+called the &lt;a href="https://stanfordstudentrobotics.org/pupper"&gt;Pupper&lt;/a&gt;. Consider me smitten. A few months before 
+I had purchased &lt;a href="http://hades.mech.northwestern.edu/index.php/Modern_Robotics"&gt;Modern Robotics&lt;/a&gt;, but couldn't relate the 
+theory to the real world. This looked to be the perfect way to put things in practice.&lt;/p&gt;
+&lt;h2&gt;Sourcing the materials&lt;/h2&gt;
+&lt;p&gt;In my excitement I failed to notice that &lt;a href="https://cypress-software-inc.myshopify.com/"&gt;someone was selling kits&lt;/a&gt; in 
+various states of completion. If I was doing it all over I would probably pay the little extra to save me both the time 
+in sourcing the parts and shipping.&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://github.com/stanfordroboticsclub/StanfordQuadruped"&gt;The project&lt;/a&gt; provides a google spreadsheet with the bill of 
+materials. It is fairly well organized and I had to place orders with Amazon, McMasterCarr, JLCPCB, JX-Servo, and 
+Great3D(for routed carbon fiber parts). Placing an order direct with &lt;a href="http://www.jx-servo.com/en/Product/"&gt;JX-Servo&lt;/a&gt; was a little nerve wracking. I had to 
+transfer, via PayPal, $450+ dollars to a Hotmail account. I know that is more than a little weird, but since PayPal has 
+a decent dispute process I thought it was worth the risk. The sales team was extremely responsive and my order was sent 
+direct from China arriving in Michigan in under seven days. JLCPCB was also just as quick. The "Plastic Spider" vendor 
+on Great3D delivered his parts in 5 days from North Carolina. The Amazon sellers were actually the slowest, but this was 
+also during the height of the covid crisis.&lt;/p&gt;
+&lt;p&gt;There are 12 parts that need to be 3d printed on an FDM Printer. I didn't notice this before, but the project provides 
+a ZIP archive of all the .stl right in the BOM sheet. I just used &lt;a href="https://a360.co/2TEh4gQ"&gt;the Fusion360 assembly&lt;/a&gt; to export the various body 
+components to STL files for printing. The fact that the project has a Fusion 360 assembly is a very big windfall. I 
+will definitely be modifying the body in the future to accommodate a camera, internal battery, and probably a Jetson 
+carrier board. For now though I went ahead with all the specified parts. &lt;/p&gt;
+&lt;p&gt;All told I believe I spent:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Item&lt;/th&gt;
+&lt;th&gt;Price with shipping&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Battery&lt;/td&gt;
+&lt;td&gt;$31.79&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Battery Charger&lt;/td&gt;
+&lt;td&gt;$61.47&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Servo Horns&lt;/td&gt;
+&lt;td&gt;$75.09&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Pi and SD Card&lt;/td&gt;
+&lt;td&gt;$65.00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Hardware&lt;/td&gt;
+&lt;td&gt;$207.14&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Servos&lt;/td&gt;
+&lt;td&gt;$352.00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;PCB&lt;/td&gt;
+&lt;td&gt;$35.25&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Carbon Fiber Parts&lt;/td&gt;
+&lt;td&gt;$103.00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Total&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;$930.74&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;I am not including a PS4 controller, which I already had, but I did add in the Pi above even though I had a couple to 
+spare. That is a little more expensive than advertised, but keep in mind I have enough hardware now to build about 5 
+more. If you are cost conscious and tolerant of long delivery times I think there are opportunities to get the servo 
+horns for ~$30 from Banggood. Similar servos could probably be fudged for ~$150 - $200 from Ali-express, but your mileage 
+may vary and it could impact the performance of the build.&lt;/p&gt;
+&lt;h2&gt;The Build&lt;/h2&gt;
+&lt;p&gt;&lt;img alt="Exposed pupper" src="https://androiddrew.github.io/images/pupper-exposed-lg.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;The build is documented both in text and a series of Youtube videos. The text instructions could use some rework but 
+the Youtube videos filled in many of the missing sections. One item in particular that was not defined explicitly in the 
+instructions I followed was the extension rod length. The Youtube video shows a process to derive the rod length in 
+relation to the femur, but shows an inaccurate way to determine that length. If you follow those instructions you will 
+be close to 1cm short. This causes problems later when your robot starts to walk. The value needed to be 123.5 mm from 
+center hole to center hole. Besides that I would say plan on 6 - 10 hours to build it. &lt;/p&gt;
+&lt;h2&gt;Software&lt;/h2&gt;
+&lt;p&gt;The software setup has room for improvement. To start, the instructions assume a specific version of Raspbian. It 
+appears that in multiples posts on the Google Group forum that many people attempted to use a newer OS version, but 
+encountered issues with items like the UDP connection requirement. I personally used the latest version of Raspbian 
+(Raspberry Pi OS (32-bit) Lite Minimal image based on Debian Buster) which only needed the udev rules for the 
+&lt;a href="https://github.com/chrippa/ds4drv#permissions"&gt;ds4drv PS4 controller package&lt;/a&gt; added after all installation steps in the docs were completed. &lt;/p&gt;
+&lt;p&gt;The instructions use their own &lt;a href="https://github.com/stanfordroboticsclub/RPI-Setup"&gt;RPI-setup&lt;/a&gt; as a convenience for setup of wifi, ssh config, read only sd card, etc. It 
+isn't necessary, but definitely will save you time setting it all up manually. Once you have a base SD card you execute 
+an install shell script, which also downloads additional repos, and runs their own install shell scripts. 
+Unfortunately, none of these repos are versioned with releases so it always pulls the master branches. Does this 
+process work? Yes, but I can see it breaking very easily. I would rather see the project distribute its software as 
+.deb packages, but until they separate configuration of the robot from code I think that won't be an option. This brings
+me to my next point.&lt;/p&gt;
+&lt;p&gt;The calibration process demonstrates the tight coupling of configuration to code. Once the servo calibration process is 
+complete, you must modify a python source file that contains the offsets. It would be better to define the robot as 
+configuration in something like yaml, which would allow the robot owners to make modifications. Changing the body 
+length or leg distance should not require modifying the source code. This would then allow the project maintainers to 
+package their code in .deb packages, thus simplifying the installation process. This would also have the added benefit of 
+allowing new hardware support (IMU, Lidar?) to be added with only what I hope to be a single additional .deb package 
+and a change to your robot's config. &lt;/p&gt;
+&lt;h2&gt;Closing thoughts&lt;/h2&gt;
+&lt;p&gt;&lt;img alt="Pupper standing side" src="https://androiddrew.github.io/images/pupper-standing-side-lg.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;Overall, I'm happy with the project and I have a perfectly functioning robot. The community members on the Google Group 
+are very responsive, and the project maintainer appears to be very open to feedback and community participation. We 
+will see where they take it in the future. I may even try my own hand at packaging these repos up for new comers.&lt;/p&gt;
+&lt;p&gt;My goal is to take this robot from simple RC to full autonomy. Camera, voice commands, better operator feedback, and 
+maybe even a Google Coral are all in my sights. The Jetson platform is also very attractive. Stay tuned.&lt;/p&gt;</content><category term="robotics"></category><category term="pupper"></category><category term="pi"></category><category term="robotics"></category><category term="python"></category></entry><entry><title>Welcome to the blag!</title><link href="https://androiddrew.github.io/2020/06/first-article/" rel="alternate"></link><published>2020-06-05T00:00:00-04:00</published><updated>2020-06-05T00:00:00-04:00</updated><author><name>Drew Bednar</name></author><id>tag:androiddrew.github.io,2020-06-05:/2020/06/first-article/</id><summary type="html">&lt;p&gt;Welcome to the Blag. That's right the blag.&lt;/p&gt;
+&lt;p&gt;I've been programming in Python since graduate school (2010), and over the years I've built blogging engines in both 
+&lt;a href="https://flask.palletsprojects.com/"&gt;Flask&lt;/a&gt; and &lt;a href="https://wagtail.io/features/"&gt;Wagtail&lt;/a&gt; (Django). One major downside to that approach was having to maintain an …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Welcome to the Blag. That's right the blag.&lt;/p&gt;
+&lt;p&gt;I've been programming in Python since graduate school (2010), and over the years I've built blogging engines in both 
+&lt;a href="https://flask.palletsprojects.com/"&gt;Flask&lt;/a&gt; and &lt;a href="https://wagtail.io/features/"&gt;Wagtail&lt;/a&gt; (Django). One major downside to that approach was having to maintain an application server and a 
+database just to host a simple blog. This time around I've listened to my peers and chosen to use &lt;a href="https://blog.getpelican.com/"&gt;Pelican&lt;/a&gt; the static 
+site generator.&lt;/p&gt;
+&lt;p&gt;Looking back on the last 10 years I regret not documenting my projects and taking the time to present my 
+accomplishments. Over the next few months you will find entries here covering machine learning, continuous delivery, web 
+application development, robotics, CAD/CAM, engineering, and more. First up, I'll be tackling a build of the &lt;a href="https://stanfordstudentrobotics.org/pupper"&gt;Standford 
+Robotics Pupper&lt;/a&gt;. Stay tuned!&lt;/p&gt;</content><category term="Drew"></category></entry></feed>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+        <title>Packaging Python Virtualenvs in ROS Noetic</title>
+
+            <link href="https://androiddrew.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Androiddrew Full Atom Feed" />
+        <!-- Custom CSS -->
+        <link href="https://androiddrew.github.io/theme/css/ruckenwind.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://androiddrew.github.io/theme/css/code_blocks/monokai.css" rel="stylesheet">
+
+
+        <!-- Custom Fonts -->
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+
+
+        <meta name="description" content="In this tutorial, we will learn how to use Python virtual environments in ROS Noetic packages by building a simple Flask application...">
+
+        <meta name="author" content="Drew Bednar">
+
+        <meta name="tags" content="robotics">
+        <meta name="tags" content="python">
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="Androiddrew">
+
+	<meta property="og:type" content="article">
+            <meta property="article:author" content="https://androiddrew.github.io/author/drew-bednar.html">
+	<meta property="og:url" content="https://androiddrew.github.io/2022/04/ros-catkin-virtualenv-intro/">
+	<meta property="og:title" content="Packaging Python Virtualenvs in ROS Noetic">
+	<meta property="article:published_time" content="2022-04-24 00:00:00-04:00">
+            <meta property="og:description" content="In this tutorial, we will learn how to use Python virtual environments in ROS Noetic packages by building a simple Flask application...">
+
+            <meta property="og:image" content="https://androiddrew.github.io/theme/img/post-bg.jpg">
+    <link rel="icon" href="/images/icons/favicon-32x32.png">
+</head>
+
+<body class="bg-gray-50 text-xl">
+    <header>
+      <div class="relative">
+        <div class="absolute inset-0">
+    <!-- Page Header -->
+          <img class="h-full w-full object-cover" src="https://androiddrew.github.io/theme/img/post-bg.jpg" alt="" aria-hidden="true" />
+        </div>
+    <!-- Nav Menu -->
+    <div class="absolute inset-0">
+<nav class="relative mx-auto text-white sticky top-0 z-10">
+  <!-- flex container for alignment. Gives flex row by default. Aligning items in the center. Justifing content with between option -->
+  <div id="navbar" class="flex items-center md:justify-between justify-end">
+      <!-- Logo with padding top 2 -->
+      <!-- Menu items -->
+      <!-- flex again for alignment but disappear on sm screens -->
+      <!-- So on md: flex  -->
+      <div class="hidden md:block">
+        <a class="p-6 text-xl font-extrabold hover:text-gray-400 duration-300 tracking-normal" href="https://androiddrew.github.io/">Androiddrew</a>
+      </div>
+      <div class="hidden md:flex">
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+      <!-- Button -->
+      <!-- Hidden on smaller screens but on md(and up) display as block -->
+  <!-- Hamburger Icon -->
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+      <span class="hamburger-top"></span>
+      <span class="hamburger-middle"></span>
+      <span class="hamburger-bottom"></span>
+  </button>
+  </div>
+  <!-- Mobile Menu -->
+  <div class="md:hidden">
+      <!-- Because it is being placed in the relative div above. -->
+      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="underline px-4 py-2 uppercase  font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+  </div>
+</nav>      </div>
+    <!-- End Nav Menu -->
+        <div class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-normal text-white align-middle">
+            Packaging Python Virtualenvs in ROS Noetic
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="text-gray-900">
+      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
+        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
+      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
+          <div class="mx-4">  -->
+    <!-- Post Content -->
+    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+        <p>In this tutorial, we will learn how to use Python virtual environments in ROS Noetic packages by building a simple Flask 
+application with catkin_virtualenv. We will cover:</p>
+<ul>
+<li>Installation of catkin_virtualenv</li>
+<li>Building a Flask application as a ROS package</li>
+<li>Installing our package</li>
+</ul>
+<h2>The Problem</h2>
+<p>The solution for isolating a Python project from the system Python or other projects is to 
+<a href="https://docs.python.org/3/tutorial/venv.html">use a virtual environment</a>. Virtualenvs allows us to vary the external dependencies between environments on the same 
+system. The <a href="http://wiki.ros.org/noetic">Robotic Operating System</a> (ROS), being a "meta" operating system, is built conceptually on top of another 
+distribution, typically a specific Ubuntu distro. It uses the operating system's package manager to fulfill its 
+dependencies, which means ROS's Python support is provided through the system Python.</p>
+<p>Unfortunately, ROS has no concept of specifying Python library versions, which means it could be nearly impossible to 
+have a reproducible build. Managing dependencies manually in a system with pip is possible but can easily result in 
+version conflicts and would mean any users of our package will also need to resolve dependencies out of band. Other 
+developers ship their development environments as Docker containers. Thankfully, <a href="https://github.com/locusrobotics/catkin_virtualenv">catkin_virtualenv</a> can help the 
+poor Python-dev package a Python virtualenv as part of their ROS package. We will use catkin_virtualenv in this 
+article to build a simple Flask app using artifacts pulled from PyPi at build time. </p>
+<h3>A note on GPL Licenses</h3>
+<p>Before we start, I want to note that catkin_virtualenv is a GPL licensed library, but this does not 
+automatically make packages built with catkin_virtualenv GPL. Please see <a href="https://answers.ros.org/question/340978/can-i-use-catkin_virtualenv-to-help-release-a-non-gplv2-package-with-bloom/#398499">this ROS Answers post</a> for a more detailed 
+analysis. In short, the required license of a collective work is a function of the licenses of its inputs. If we 
+stick to packaging and importing code with permissive licenses like the MIT, we can use the MIT license for our 
+collective work. </p>
+<h2>catkin_virtualenv</h2>
+<p>The <a href="https://github.com/locusrobotics/catkin_virtualenv">catkin_virtualenv</a> package adds CMake macros to the catkin build process that allow us to build a virtualenv and 
+pip install Python dependencies from a remote repository. In essence, we can avoid <code>rosdep</code> and use specific versions of 
+Python libraries in our package. </p>
+<h3>Installation Option 1: git clone</h3>
+<p>The <a href="https://github.com/locusrobotics/catkin_virtualenv">catkin_virtualenv</a> repo is not a ROS package at the top level, so the typical workflow of cloning the repo into a 
+catkin workspace <code>src/</code> will result in a build failure. We can achieve the same result by cloning the 
+repository outside of our workspace and symlinking it into our target workspace <code>src/</code> directory. </p>
+<p>At the time of writing, the master branch for catkin_virtualenv is on commit id <code>24ab743</code>. We can explicitly use this 
+commit id for this tutorial. From outside of our catkin workspace, we will clone the repository without an implicit 
+checkout, change directories, and explicitly checkout <code>24ab743</code>.</p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>-n<span class="w"> </span>https://github.com/locusrobotics/catkin_virtualenv.git
+<span class="nb">cd</span><span class="w"> </span>catkin_virtualenv<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>checkout<span class="w"> </span>24ab743
+</code></pre></div>
+
+<p>Now we can symlink this package into our workspace. In my case, I cloned catkin_virtualenv into <code>~/experiments</code>, and 
+symlinked it to a catkin workspace in <code>~/experiments/ros_ws/src/</code>.</p>
+<div class="codehilite"><pre><span></span><code>ln<span class="w"> </span>-s<span class="w"> </span>~/experiments/catkin_virtualenv/catkin_virtualenv/<span class="w"> </span>~/experiments/ros_ws/src/
+</code></pre></div>
+
+<p>Back in our workspace, we can now run <code>catkin_make</code> or <code>catkin_make_isolated</code>(See <a href="https://www.ros.org/reps/rep-0134.html">REP 134</a>). I prefer the greater 
+control provided by <code>catkin_make_isolated</code>. </p>
+<div class="codehilite"><pre><span></span><code>catkin_make_isolated
+</code></pre></div>
+
+<p>If this is successful, we should also check to ensure that our system meets the package's dependencies.</p>
+<div class="codehilite"><pre><span></span><code>rosdep<span class="w"> </span>check<span class="w"> </span>catkin_virtualenv
+</code></pre></div>
+
+<p>Technically, we have not installed the package at this point, but it will be available under <code>./devel_isolated</code> and 
+usable developing our <code>simple_flask</code> package. I leave this as a development package to demonstrate that it is 
+not needed for execution later.</p>
+<h3>Installation Option 2: Bloom Artifact</h3>
+<p>The Bloom-built artifact can be used if an older version is acceptable. At the time of writing, this artifact was built 
+with version 0.6.1 of catkin_virtualenv. In the above git-based installation, the master branch is post 0.8.0 release. 
+Your mileage may vary.</p>
+<div class="codehilite"><pre><span></span><code>rosdep<span class="w"> </span>resolve<span class="w"> </span>catkin_virtualenv
+
+<span class="c1">#apt</span>
+ros-noetic-catkin-virtualenv
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ros-noetic-catkin-virtualenv
+</code></pre></div>
+
+<p>This command will install <code>catkin_virtualenv</code> under<code>/opt/ros/noetic/</code>, so it will be globally available to all catkin 
+workspaces on the system.</p>
+<h3>Our catkin_virtualenv Experiment</h3>
+<p>If we attempted to use the system package <code>python3-flask</code> in our ROS node, we'd find version 1.1.x as the most recent 
+version. As a simple example, let's create a package that launches a Flask 2.x web application with <code>catkin_virtualenv</code>.</p>
+<p>Starting from the catkin workspace <code>src/</code> directory, create a new package with <code>catkin_virtualenv</code> as a dependency.</p>
+<div class="codehilite"><pre><span></span><code>catkin_create_pkg<span class="w"> </span>simple_flask<span class="w"> </span>catkin_virtualenv
+<span class="nb">cd</span><span class="w"> </span>simple_flask
+</code></pre></div>
+
+<p>Now, create a pip <code>requirements.txt</code> file with our desired Flask version.</p>
+<p><em>simple_flask/requirements.txt</em></p>
+<div class="codehilite"><pre><span></span><code>flask==2.1.1
+</code></pre></div>
+
+<p>Next, we need to link this requirements file with the catkin build process. This task is accomplished by adding 
+catkin_virtualenv to our <code>package.xml</code> and referencing our <code>requirements.txt</code> using the newly available 
+<code>pip_requirements</code> section in the <code>export</code> tag.</p>
+<p><em>simple_flask/package.xml</em></p>
+<div class="codehilite"><pre><span></span><code><span class="cp">&lt;?xml version=&quot;1.0&quot;?&gt;</span>
+<span class="nt">&lt;package</span><span class="w"> </span><span class="na">format=</span><span class="s">&quot;2&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;name&gt;</span>simple_flask<span class="nt">&lt;/name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;version&gt;</span>0.1.0<span class="nt">&lt;/version&gt;</span>
+<span class="w">  </span><span class="nt">&lt;description&gt;</span>The<span class="w"> </span>simple_flask<span class="w"> </span>package<span class="nt">&lt;/description&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;maintainer</span><span class="w"> </span><span class="na">email=</span><span class="s">&quot;drew@androiddrew.com&quot;</span><span class="nt">&gt;</span>Drew<span class="w"> </span>Bednar<span class="nt">&lt;/maintainer&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;license&gt;</span>MIT<span class="nt">&lt;/license&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;buildtool_depend&gt;</span>catkin<span class="nt">&lt;/buildtool_depend&gt;</span>
+<span class="w">  </span><span class="nt">&lt;build_depend&gt;</span>catkin_virtualenv<span class="nt">&lt;/build_depend&gt;</span>
+<span class="w">  </span><span class="nt">&lt;build_export_depend&gt;</span>catkin_virtualenv<span class="nt">&lt;/build_export_depend&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;export&gt;</span>
+<span class="w">      </span><span class="nt">&lt;pip_requirements&gt;</span>requirements.txt<span class="nt">&lt;/pip_requirements&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/export&gt;</span>
+<span class="nt">&lt;/package&gt;</span>
+</code></pre></div>
+
+<p>For our Flask app, we will create a single route app that displays the Flask version. We must 
+include the <code>#!/usr/bin/env python3</code> shebang line for our Python scripts. During the build, catkin_virtualenv will 
+create wrapper scripts that will use the bundled virtualenv instead of the system Python libraries for execution. </p>
+<p><em>simple_flask/nodes/flask_node.py</em></p>
+<div class="codehilite"><pre><span></span><code><span class="ch">#!/usr/bin/env python3</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">__version__</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Flask version: </span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</code></pre></div>
+
+<p>We need to modify the <code>CMakeLists.txt</code> to find our package's single node and bundle the virtualenv using the 
+<code>catkin_generate_virtualenv</code>. See the <a href="https://github.com/locusrobotics/catkin_virtualenv#additional-cmake-options">additional CMake options</a> section of the README.md for more options.</p>
+<p><em>simple_flask/CMakeLists.txt</em></p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.0.2</span><span class="p">)</span>
+<span class="nb">project</span><span class="p">(</span><span class="s">simple_flask</span><span class="p">)</span>
+
+<span class="nb">find_package</span><span class="p">(</span><span class="s">catkin</span><span class="w"> </span><span class="s">REQUIRED</span><span class="w"> </span><span class="s">COMPONENTS</span>
+<span class="w">  </span><span class="s">catkin_virtualenv</span>
+<span class="p">)</span>
+
+<span class="nb">catkin_generate_virtualenv</span><span class="p">(</span>
+<span class="w">    </span><span class="s">PYTHON_INTERPRETER</span><span class="w"> </span><span class="s">python3</span>
+<span class="p">)</span>
+
+<span class="nb">catkin_package</span><span class="p">()</span>
+
+<span class="nb">include_directories</span><span class="p">(</span>
+<span class="w"> </span><span class="s">include</span>
+<span class="w">  </span><span class="o">${</span><span class="nv">catkin_INCLUDE_DIRS</span><span class="o">}</span>
+<span class="p">)</span>
+
+<span class="nb">install</span><span class="p">(</span><span class="s">FILES</span><span class="w"> </span><span class="s">requirements.txt</span>
+<span class="w">  </span><span class="s">DESTINATION</span><span class="w"> </span><span class="o">${</span><span class="nv">CATKIN_PACKAGE_SHARE_DESTINATION</span><span class="o">}</span><span class="p">)</span>
+
+<span class="w"> </span><span class="nb">catkin_install_python</span><span class="p">(</span><span class="s">PROGRAMS</span>
+<span class="w">   </span><span class="s">nodes/flask_node.py</span>
+<span class="w">   </span><span class="s">DESTINATION</span><span class="w"> </span><span class="o">${</span><span class="nv">CATKIN_PACKAGE_BIN_DESTINATION</span><span class="o">}</span>
+<span class="w"> </span><span class="p">)</span>
+</code></pre></div>
+
+<p>We are now ready to run <code>catkin_make_isolated</code> again in our workspace. This command will build our <code>simple_flask</code> 
+package in the <code>./devel_isolated</code> directory using the build of catkin_virtualenv from the previous step.</p>
+<div class="codehilite"><pre><span></span><code>catkin_make_isolated
+</code></pre></div>
+
+<p>We can check and see that, indeed we now have a virtualenv associated with our <code>simple_flask</code> package and that it 
+contains its own isolated sites-packages. </p>
+<div class="codehilite"><pre><span></span><code>ls<span class="w"> </span>./devel_isolated/simple_flask/share/simple_flask/venv/lib/python3.8/site-packages
+</code></pre></div>
+
+<p>We can launch our node using <code>rosrun</code>. This will start the Flask app using the Werkzeug development server and bind 
+to port <code>5000</code> of our host.</p>
+<div class="codehilite"><pre><span></span><code>rosrun<span class="w"> </span>simple_flask<span class="w"> </span>flask_node.py
+</code></pre></div>
+
+<p>The above command was not preceded by starting <code>roscore</code>, but that's fine since this entire experiment is simply about 
+packaging the Python dependencies. </p>
+<h2>Installing our new package</h2>
+<p>In this last step, we will prove that this package is installable in the same manner as other catkin-built packages.
+We will install it to a location outside of our catkin workspace and run the above <code>rosrun</code> command 
+again.</p>
+<div class="codehilite"><pre><span></span><code>mkdir<span class="w"> </span>../demo-install
+catkin_make_isolated<span class="w"> </span>--install<span class="w"> </span>--install-space<span class="w"> </span>../demo-install
+<span class="nb">cd</span><span class="w"> </span>../demo-install
+</code></pre></div>
+
+<p>Next, we will replace <code>ROS_PACKAGE_PATH</code> since it includes references to our workspace. Be sure to replace 
+<code>&lt;your_username&gt;</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">unset</span><span class="w"> </span>ROS_PACKAGE_PATH
+<span class="nb">export</span><span class="w"> </span><span class="nv">ROS_PACKAGE_PATH</span><span class="o">=</span>/home/&lt;your_username&gt;/experiments/demo-install/share:/opt/ros/noetic/share
+</code></pre></div>
+
+<p>All that's left now is to <code>rosrun</code> the our package again</p>
+<div class="codehilite"><pre><span></span><code>rosrun<span class="w"> </span>simple_flask<span class="w"> </span>flask_node.py
+</code></pre></div>
+
+<h2>Closing thoughts</h2>
+<p>We should now know how to build our own ROS nodes with catkin_virtualenv. I plan to expand my own 
+projects to leverage the <a href="https://github.com/jazzband/pip-tools/">pip-tools</a> functionality to create lock files for my Python dependencies. Additionally, I will 
+be investigating how to build .deb archives for these packages. </p>
+<p>In a follow on article, we will continue this journey by using catkin_virtualenv to build <a href="https://github.com/locusrobotics/aiorospy">aiorospy</a> as a dependency for 
+driving a <a href="https://mjbots.com/">Moteus</a> brushless DC motor controller in ROS. Finally, thank you <a href="https://locusrobotics.com/">Locus Robotics</a>, Paul Bovbel, and 
+contributors for making such a great open-source package. </p>
+    </article>
+
+        <div class="tags">
+            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/robotics.html">robotics</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/python.html">python</a></p>
+        </div>
+
+
+        </div>
+      </div>
+    </main>
+    <!-- End Main Content -->
+    <hr class="mt-12" />
+    <!-- Footer -->
+<footer>
+    <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div class="mt-8 flex justify-center space-x-6">
+      </div>
+      <p class="mt-8 text-center text-base text-gray-400">
+        &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
+      </p>
+    </div>
+  </footer>
+    <!-- End Footer -->
+    <!-- Custom Theme JavaScript -->
+    <script src="https://androiddrew.github.io/theme/js/ruckenwind.js"></script>
+ 
+    
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'G-Q1PJ9PSLM4', 'auto');
+    ga('send', 'pageview');
+</script>
+
+  </body>
+</html>
