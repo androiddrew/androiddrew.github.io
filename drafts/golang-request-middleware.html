@@ -2,12 +2,12 @@
 <html lang="en">
 
 <head>
-        <meta charset="utf-8">
+            <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
 
-        <title>Androiddrew - Categories</title>
+        <title>Golang Request Middleware</title>
 
             <link href="https://androiddrew.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Androiddrew Full Atom Feed" />
         <!-- Custom CSS -->
@@ -20,21 +20,38 @@
         <!-- Custom Fonts -->
         <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
 
-                <meta property="og:locale" content="">
+
+
+        <meta name="description" content="Learning how to implement a request scoped logger for my HTTP handlers in Golang.">
+
+        <meta name="author" content="Drew Bednar">
+
+        <meta name="tags" content="webdev">
+
+	                <meta property="og:locale" content="">
 		<meta property="og:site_name" content="Androiddrew">
+
+	<meta property="og:type" content="article">
+            <meta property="article:author" content="https://androiddrew.github.io/author/drew-bednar.html">
+	<meta property="og:url" content="https://androiddrew.github.io/drafts/golang-request-middleware.html">
+	<meta property="og:title" content="Golang Request Middleware">
+	<meta property="article:published_time" content="2025-11-03 00:00:00-05:00">
+            <meta property="og:description" content="Learning how to implement a request scoped logger for my HTTP handlers in Golang.">
+
+            <meta property="og:image" content="https://androiddrew.github.ioimages/gopher-programming.png">
     <link rel="icon" href="/images/icons/favicon-32x32.png">
 </head>
 
 <body class="bg-gray-50 text-xl">
-<header>
-    <div class="relative">
-      <!-- Header image and overlay -->
-      <div class="absolute inset-0">
-        <img class="h-full w-full object-cover" src="https://androiddrew.github.io/theme/img/home-bg.jpg" alt="" aria-hidden="true" />
-      </div>
-      <!-- End Header image and overlay -->
-      <!-- Nav menu -->
-      <div class="absolute inset-0">
+    <header>
+      <div class="relative">
+        <div class="absolute inset-0">
+    <!-- Page Header -->
+          <img class="h-full w-full object-cover" src="https://androiddrew.github.io/images/gopher-programming.png" alt="" aria-hidden="true" />
+          <div class="h-full absolute inset-0 bg-gray-500 mix-blend-multiply" aria-hidden="true"></div>
+        </div>
+    <!-- Nav Menu -->
+    <div class="absolute inset-0">
 <nav class="relative mx-auto text-white sticky top-0 z-10">
   <!-- flex container for alignment. Gives flex row by default. Aligning items in the center. Justifing content with between option -->
   <div id="navbar" class="flex items-center md:justify-between justify-end">
@@ -70,16 +87,14 @@
       </div>
   </div>
 </nav>      </div>
-      <!-- End Nav menu -->
-      <div
-        class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
-        <h1
-          class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-normal text-white align-middle">
-          Androiddrew
-        </h1>
+    <!-- End Nav Menu -->
+        <div class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-normal text-white align-middle">
+            Golang Request Middleware
+          </h1>
+        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
     <!-- Main Content -->
     <main class="text-gray-900">
@@ -87,19 +102,20 @@
         <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
       <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
           <div class="mx-4">  -->
-    <ul>
-        <li><a href="https://androiddrew.github.io/category/ai.html">ai</a></li>
-        <li><a href="https://androiddrew.github.io/category/drew.html">Drew</a></li>
-        <li><a href="https://androiddrew.github.io/category/goals.html">goals</a></li>
-        <li><a href="https://androiddrew.github.io/category/golang.html">golang</a></li>
-        <li><a href="https://androiddrew.github.io/category/kubernetes.html">kubernetes</a></li>
-        <li><a href="https://androiddrew.github.io/category/linux.html">linux</a></li>
-        <li><a href="https://androiddrew.github.io/category/microcontroller.html">microcontroller</a></li>
-        <li><a href="https://androiddrew.github.io/category/observability.html">observability</a></li>
-        <li><a href="https://androiddrew.github.io/category/robotics.html">robotics</a></li>
-        <li><a href="https://androiddrew.github.io/category/ros.html">ros</a></li>
-        <li><a href="https://androiddrew.github.io/category/webdev.html">webdev</a></li>
-    </ul>
+    <!-- Post Content -->
+    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+        <h1>Golang Request Middleware</h1>
+<p>I'm fortunate enough to be working for an established software SaaS company as I am learning Golang. At work we primarily use Python, but the occasion to implement new sweeping changes in a 12 year old product are few and far between. One of the benefits though is that I have plenty of experience troubleshooting bugs and nothing has been more indespensible in this effort than a traceId. Below I will outline an implementation of Golang middleware that will create a request traceId if a <code>X-REQUEST-ID</code> header isn't already present on the request and thread this through via context to all layers of a request's execution context. </p>
+<h2>A Pattern For a Request Scoped Logger</h2>
+<p>Other's have assembled more elequant articles on Golang middleware. I will assume that you already have an understanding of how this is accomplished with Golang's <code>net/http</code> package. If not please read Matt Silverlock's <a href="https://blog.questionable.services/article/guide-logging-middleware-go/">A Guide To Writing Logging Middleware in Go </a> first.</p>
+<p>What will a request scoped logger get us? Well, a rudimentary means of traceability in your logging. Realistically, if you are doing this professionally I think you should be reaching for (OTEL)[https://www.romaglushko.com/blog/opentelemetry-sdk/].</p>
+    </article>
+
+        <div class="tags">
+            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/webdev.html">webdev</a></p>
+        </div>
+
+
         </div>
       </div>
     </main>

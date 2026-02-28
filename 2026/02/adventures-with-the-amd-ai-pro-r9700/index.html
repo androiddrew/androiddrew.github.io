@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+        <title>Adventures with the AMD Radeon AI Pro R9700</title>
+
+            <link href="https://androiddrew.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Androiddrew Full Atom Feed" />
+        <!-- Custom CSS -->
+        <link href="https://androiddrew.github.io/theme/css/ruckenwind.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://androiddrew.github.io/theme/css/code_blocks/monokai.css" rel="stylesheet">
+
+
+        <!-- Custom Fonts -->
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+
+
+        <meta name="description" content="Learning to use AMD and the ROCm platform is choosing to learn AI on hard mode.">
+
+        <meta name="author" content="Drew Bednar">
+
+        <meta name="tags" content="amd">
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="Androiddrew">
+
+	<meta property="og:type" content="article">
+            <meta property="article:author" content="https://androiddrew.github.io/author/drew-bednar.html">
+	<meta property="og:url" content="https://androiddrew.github.io/2026/02/adventures-with-the-amd-ai-pro-r9700/">
+	<meta property="og:title" content="Adventures with the AMD Radeon AI Pro R9700">
+	<meta property="article:published_time" content="2026-02-28 00:00:00-05:00">
+            <meta property="og:description" content="Learning to use AMD and the ROCm platform is choosing to learn AI on hard mode.">
+
+            <meta property="og:image" content="https://androiddrew.github.ioimages/dual_r9700.webp">
+    <link rel="icon" href="/images/icons/favicon-32x32.png">
+</head>
+
+<body class="bg-gray-50 text-xl">
+    <header>
+      <div class="relative">
+        <div class="absolute inset-0">
+    <!-- Page Header -->
+          <img class="h-full w-full object-cover" src="https://androiddrew.github.io/images/dual_r9700.webp" alt="" aria-hidden="true" />
+          <div class="h-full absolute inset-0 bg-gray-500 mix-blend-multiply" aria-hidden="true"></div>
+        </div>
+    <!-- Nav Menu -->
+    <div class="absolute inset-0">
+<nav class="relative mx-auto text-white sticky top-0 z-10">
+  <!-- flex container for alignment. Gives flex row by default. Aligning items in the center. Justifing content with between option -->
+  <div id="navbar" class="flex items-center md:justify-between justify-end">
+      <!-- Logo with padding top 2 -->
+      <!-- Menu items -->
+      <!-- flex again for alignment but disappear on sm screens -->
+      <!-- So on md: flex  -->
+      <div class="hidden md:block">
+        <a class="p-6 text-xl font-extrabold hover:text-gray-400 duration-300 tracking-normal" href="https://androiddrew.github.io/">Androiddrew</a>
+      </div>
+      <div class="hidden md:flex">
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="py-6 px-3 first:pl-6 last:pr-6 uppercase text-sm font-semibold hover:text-gray-400 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+      <!-- Button -->
+      <!-- Hidden on smaller screens but on md(and up) display as block -->
+  <!-- Hamburger Icon -->
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+      <span class="hamburger-top"></span>
+      <span class="hamburger-middle"></span>
+      <span class="hamburger-bottom"></span>
+  </button>
+  </div>
+  <!-- Mobile Menu -->
+  <div class="md:hidden">
+      <!-- Because it is being placed in the relative div above. -->
+      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
+        <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
+            <a class="underline px-4 py-2 uppercase  font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/About Androiddrew/">About Me</a>
+      </div>
+  </div>
+</nav>      </div>
+    <!-- End Nav Menu -->
+        <div class="relative mx-auto max-w-xl lg:max-w-4xl py-16 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-normal text-white align-middle">
+            Adventures with the AMD Radeon AI Pro R9700
+          </h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="text-gray-900">
+      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
+        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
+      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
+          <div class="mx-4">  -->
+    <!-- Post Content -->
+    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+        <h1>Adventures with AMD Radeon AI Pro R9700 (gxf1201)</h1>
+<h2>Your Primer</h2>
+<p>Picking AMD and ROCm for AI is choosing hard mode. I guess you could pick a "harder" mode by using an Intel GPU or a less popular AI framework like Tiny Grad, but if you want the DIY experience of fussing with source builds and missing kernels, then AMD with ROCm will do just fine.</p>
+<p>What is ROCm you say? Think of it as AMD's swing at competing with Nvidia CUDA, but with rougher edges. Like it's CUDA competitor, ROCm is the umbrella term for all of the libraries, tools, and abstractions used to program compute operations on these cards. Now, let's complicate things a little more and have two different micro architectures and instruction sets. In AMD land there is the CDNA family, which you will find in the datacenter accelerators like the MI300, and then there is the RDNA family, which you will find in your edgy PC gamer desktop builds. Since the AI boom is primarily happening in datacenters, CDNA cards will have better support for pretty much everything in the ROCm stack.</p>
+<h2>A Tale of Two Cards</h2>
+<p>With that out of the way let's talk about my experience. On 10/25/2025 AMD launched the Radeon AI Pro R9700, a new AI workstation card marketed as "AI ready!". Let's see some specs!</p>
+<p>Radeon AI Pro R9700:</p>
+<table>
+<thead>
+<tr>
+<th>Specification</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPU Architecture</td>
+<td>AMD RDNA™ 4</td>
+</tr>
+<tr>
+<td>Ray Accelerators</td>
+<td>64</td>
+</tr>
+<tr>
+<td>AI Accelerators</td>
+<td>128</td>
+</tr>
+<tr>
+<td>Stream Processors</td>
+<td>4096</td>
+</tr>
+<tr>
+<td>Compute Units</td>
+<td>64</td>
+</tr>
+<tr>
+<td>Boost Frequency</td>
+<td>Up to 2920 MHz</td>
+</tr>
+<tr>
+<td>Game Frequency</td>
+<td>2350 MHz</td>
+</tr>
+<tr>
+<td>Peak Pixel Fill-Rate</td>
+<td>Up to 373.76 GP/s</td>
+</tr>
+<tr>
+<td>Peak Single Precision (FP32 Vector) Performance</td>
+<td>47.8 TFLOPs</td>
+</tr>
+<tr>
+<td>Peak Half Precision (FP16 Vector) Performance</td>
+<td>47.8 TFLOPs</td>
+</tr>
+<tr>
+<td>Peak Half Precision (FP16 Matrix) Performance</td>
+<td>191 TFLOPs</td>
+</tr>
+<tr>
+<td>Peak Half Precision (FP16 Matrix) Performance with Structured Sparsity</td>
+<td>383 TFLOPs</td>
+</tr>
+<tr>
+<td>Peak 8-bit Precision (FP8 Matrix) Performance (E5M2, E4M3)</td>
+<td>383 TFLOPs</td>
+</tr>
+<tr>
+<td>Peak 8-bit Precision (FP8 Matrix) Performance with Structured Sparsity</td>
+<td>766 TFLOPs</td>
+</tr>
+<tr>
+<td>Peak 8-bit Precision (INT8 Matrix) Performance</td>
+<td>383 TOPs</td>
+</tr>
+<tr>
+<td>Peak 8-bit Precision (INT8 Matrix) Performance with Structured Sparsity</td>
+<td>766 TOPs</td>
+</tr>
+<tr>
+<td>Peak 4-bit Precision (INT4 Matrix) Performance</td>
+<td>766 TOPs</td>
+</tr>
+<tr>
+<td>Peak 4-bit Precision (INT4 Matrix) Performance with Structured Sparsity</td>
+<td>1531 TOPs</td>
+</tr>
+<tr>
+<td>ROPs</td>
+<td>128</td>
+</tr>
+<tr>
+<td>Transistor Count</td>
+<td>53.9 Billion</td>
+</tr>
+<tr>
+<td>OS Support</td>
+<td>Windows 10 (64-Bit), Windows 11 (64-Bit), Linux x86 64-Bit</td>
+</tr>
+<tr>
+<td>Wattage</td>
+<td>300W</td>
+</tr>
+</tbody>
+</table>
+<p>As for memory it has:</p>
+<table>
+<thead>
+<tr>
+<th>Specification</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dedicated Memory Size</td>
+<td>32 GB</td>
+</tr>
+<tr>
+<td>Dedicated Memory Type</td>
+<td>GDDR6</td>
+</tr>
+<tr>
+<td>AMD Infinity Cache Technology</td>
+<td>64 MB</td>
+</tr>
+<tr>
+<td>Memory Interface</td>
+<td>256-bit</td>
+</tr>
+<tr>
+<td>Peak Memory Bandwidth</td>
+<td>640 GB/s</td>
+</tr>
+<tr>
+<td>Memory ECC Support</td>
+<td>Yes (Linux Only)</td>
+</tr>
+</tbody>
+</table>
+<p>The price tag starts at $1300 and unlike the a 5090 these aren't made of Unobtanium. Did you notice it's an RDNA4 card? That's right, this is basically a Radeon RX 9070 XT with 32GB of ram and a blower fan. Roughly, I like to describe this as 60% of a 5090 at 40% the cost. Arguably though, we should be comparing this to the NVIDIA RTX PRO 4500 Blackwell workstation card. </p>
+<p>NVIDIA RTX PRO 4500 Blackwell:</p>
+<table>
+<thead>
+<tr>
+<th>Specification</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPU Name</td>
+<td>GB203</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td>Blackwell 2.0</td>
+</tr>
+<tr>
+<td>Process Size</td>
+<td>5 nm</td>
+</tr>
+<tr>
+<td>Transistors</td>
+<td>45,600 million</td>
+</tr>
+<tr>
+<td>Release Date</td>
+<td>Mar 18th, 2025</td>
+</tr>
+<tr>
+<td>Base Clock</td>
+<td>1635 MHz</td>
+</tr>
+<tr>
+<td>Boost Clock</td>
+<td>2407 MHz</td>
+</tr>
+<tr>
+<td>Memory Size</td>
+<td>32 GB</td>
+</tr>
+<tr>
+<td>Memory Type</td>
+<td>GDDR7</td>
+</tr>
+<tr>
+<td>Bandwidth</td>
+<td>896.0 GB/s</td>
+</tr>
+<tr>
+<td>Tensor Cores</td>
+<td>328</td>
+</tr>
+<tr>
+<td>FP16 (half)</td>
+<td>50.53 TFLOPS (1:1)</td>
+</tr>
+<tr>
+<td>FP32 (float)</td>
+<td>50.53 TFLOPS</td>
+</tr>
+<tr>
+<td>Wattage</td>
+<td>200W</td>
+</tr>
+</tbody>
+</table>
+<p>This card comes in at $2,759.99 on Newegg as of 02/27/2026. Unfortunately, I could not find INT4, INT8, and FP8 metrics anywhere. At FP32/FP16 though the AMD Radeon Pro R9700 and Nvidia RTX Pro 4500 are in the same ball park. The memory bandwidth of the NVIDIA RTX PRO 4500 is 40% faster (GDDR7 vs GDDR6) and on per watt basis it is also 50% more efficient at compute. That price though. You can get two AMD Radeon Pro R9700 cards for the price of one NVIDIA RTX PRO 4500, and that's just what I did.</p>
+<h2>The Build</h2>
+<p>I was fortunate enough to start buying my PC parts at the start of transistor apocalypse. I did pay a bit of a premium for my ram but not nearly what ya'll are getting charged today.</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>AMD Ryzen 9 9900X3D</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>128 GB 5600 Mhz</td>
+</tr>
+<tr>
+<td>Motherboard</td>
+<td>ASUS ProArt X870E-CREATOR</td>
+</tr>
+<tr>
+<td>Hard drive</td>
+<td>Samsung SSD 9100 PRO 2TB</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td>AMD Radeon AI Pro R9700 (2x)</td>
+</tr>
+<tr>
+<td>Power Supply</td>
+<td>Thermaltake 1650W</td>
+</tr>
+<tr>
+<td>Case</td>
+<td>Fractal Design North XL</td>
+</tr>
+<tr>
+<td>Cooler</td>
+<td>ASUS ProArt LC 360 AIO</td>
+</tr>
+</tbody>
+</table>
+<h2>Gimme Those Tokens!</h2>
+<p>Ok, initially I only had one GPU so we have to walk down this road a little before we get to the dual wielding beast this machine became. As with most people self-hosting LLM inference I started off with LM Studio. I have the unfounded belief that <a href="https://huggingface.co/mistralai/Devstral-Small-2-24B-Instruct-2512">Mistralai  Devstral Small 2 24B</a> is going to be the model for local coding agents. Let's get into some of the details of this one before we come back to talking inference.</p>
+<p>The Devstral Small 2 is a 24 billion parameter dense model in FP8. At inference time, all 24B parameters are activated for each input. This is in contrast to a mixture of experts(MOE) like the Qwen3 line of agentic coding models. In an MOE only a small subset of the parameters is active, and a router identifies which expert to activate. There is more nuisance than just raw active parameter count though, so let's talk about hidden dimensions. </p>
+<p>In an LLM the hidden dimension size defines the size of the vectors the model uses. We can think of this as the "resolution" of tokens. A higher hidden dimensionality, means it can potentially capture more nuance in the relationships between tokens. I say potentially, because it still comes down to training. There is a tax to high dimensionality though, and you pay for it in VRAM. You can roughly guesstimate the KVCache with the following equation: <code>2×Layers×Hidden Dimension=size</code>. So double the hidden dimensions and we double the cost per token in the KVCache, which in turn determines how large of a context window can operate with given the finite resources of our machine.</p>
+<p>The Radeon Pro R9700 has 30 GiB of VRAM, if you have ECC enabled, which I do because I'm not a savage. At FP8 for most of the layers it takes roughly 28.8 GiB of VRAM on vLLM. Effectively this leaves me with no usable context window.</p>
+<h2>The Side Questing Begins</h2>
+<h3>Side Quest 1: Quantization</h3>
+<p>I prefer vLLM, but that's just because I have used it frequently for work. Looking on Huggingface I found a 4-bit weight https://huggingface.co/cyankiwi/Devstral-Small-2-24B-Instruct-2512-AWQ-4bit version which could halve the memory requirements. Firing it up in vLLM using the ROCm Nightly build, I found the CounchLinear kernel is the only one that would work, but not with a group size of 32 this quant uses. Of course I'd do what any reasonable person would do at that point. I stalked the developer of this quantized version across multiple social networks and eventually convinced him to share his LLM Compressor scripts and methodology. A couple hours on a rented H100, and I had my <a href="https://huggingface.co/androiddrew/Devstral-Small-2-24B-Instruct-2512-AWQ-4bit">own shiny new quantized version with a 128 group size</a>. Round two and I get 10 tps single user experience. Not usable. Really, this is a problem with ROCm and AITER. AMD just doesn't appear to have kernels there for W4A16 models. </p>
+<h3>Side Quest 2: Pivot to Llama.cpp</h3>
+<p>It's at this point you may be picking up on a particular character flaw. I love me a good underdog. You tell me turn right, I go left. Nvidia cards are the best, I buy AMD. I probably should have just used llama.cpp directly or LM Studio, but for this side quest I chose Ollama instead. </p>
+<p>Interesting thing about Ollama, they use ROCm 6.x and the gfx1201 (my card) isn't really supported util ROCm 7.2. Don't get me wrong, you can lie and say its an older RDNA3 card and it may work, but that's not for me. It was at this time I signed up for the <a href="https://www.amd.com/en/developer/ai-dev-program.html">AMD AI Developer</a> and got access to the Discord. With the help of #resolver0 and <code>AMD_LOG_LEVEL=3 OLLAMA_DEBUG=2</code>, I was able to build an <a href="https://github.com/androiddrew/ollama/tree/drew/rocm7p2">Ollama 0.15.4 fork</a> with ROCm 7.2. I also have a <a href="https://hub.docker.com/layers/androiddrew/ollama/0.15.4-rocm-7.2/images/sha256-5de6c0238bc99642b54af76abcfcf1506cbf4c52e6a1ffe727ef0f8bfaeacff8">docker image</a> if you'd like to try it out for yourself. </p>
+<div class="codehilite"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>ollama-rocm7p2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--device<span class="w"> </span>/dev/kfd<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--device<span class="w"> </span>/dev/dri<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--group-add<span class="w"> </span>video<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-e<span class="w"> </span><span class="nv">HSA_OVERRIDE_GFX_VERSION</span><span class="o">=</span><span class="m">12</span>.0.1<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="m">11434</span>:11434<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--security-opt<span class="w"> </span><span class="nv">seccomp</span><span class="o">=</span>unconfined<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-v<span class="w"> </span>~/.cache/huggingface:/root/.cache/huggingface<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-v<span class="w"> </span>./:/model<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--env<span class="w"> </span><span class="s2">&quot;HF_TOKEN=</span><span class="nv">$HF_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ipc<span class="o">=</span>host<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>androiddrew/ollama:0.15.4-rocm-7.2
+</code></pre></div>
+
+<p>I don't really have any complaints about Ollama. It works. Using the unsloth Devstral-Small-2-24B-Instruct-2512-UD-Q4_K_XL.gguf took 14.4 GiB of VRAM, leaving me with 15.4 GiB for context. I was getting roughly 33 TPS for decode for a single user experience, but that context window is less than 40K. Since I want to use Opencode and crank it up to 120K context window I really am only left with two options. Use this new Ollama build to offload layers on to the CPU so I can get more context, or acquire more VRAM.</p>
+<h3>Side Quest 3: Money Solves Problems</h3>
+<p>Well, I am fortunate enough that by this time it was birthday and the wife did not begrudge me spending an additional $1300. Turns out though I needed a larger power supply too, but I didn't share that. Now that I am equipped with a dual-wielding beast with 62 GiB of usable VRAM, it was time re-evaluate my inference choices. Llama.cpp is pretty damn decent, but it lacks true tensor parallelism. With vLLM I can split the model weights across both GPUs, allowing me to load models I couldn't on a single GPU and leverage the full available vRAM for my purposes. </p>
+<p>Remember that 10 TPS I saw with my 4-bit quantized version? Well at the standard FP8 I actually get a useable kernel from the ROCm stack. With 28.8 GiB of model weights, that leaves me with 33.2 GiB for context window. At standard FP16 that's 217,000 tokens. There is enough VRAM there now for two concurrent sessions with max-context-len 100,000+. Unfortunately, I couldn't get KVCache FP8 to work, but no need to be greedy. I have enough compute for me and a friend. </p>
+<p>So what am I seeing for performance? Well a quick benchmark showed</p>
+<div class="codehilite"><pre><span></span><code>Throughput: 3.03 requests/s, 1369.18 total tokens/s, 659.90 output tokens/s
+Total num prompt tokens:  23401
+Total num output tokens:  21772
+</code></pre></div>
+
+<p>Single user sees about low 30's for TPS during decode phase.</p>
+<div class="codehilite"><pre><span></span><code>(APIServer pid=2725) INFO 02-24 20:57:23 [loggers.py:257] Engine 000: Avg prompt throughput: 6.3 tokens/s, Avg generation throughput: 29.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.3%, Prefix cache hit rate: 0.0%, MM cache hit rate: 0.0%
+(APIServer pid=2725) INFO 02-24 20:57:33 [loggers.py:257] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 33.8 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.5%, Prefix cache hit rate: 0.0%, MM cache hit rate: 0.0%
+</code></pre></div>
+
+<p>Not, bad. Certainly usable, and definitely can have multiple agents running at the same time. The thing to remember is performance is just going to keep getting better. Both Ollama and vLLM right now lack the CK Attention that AMD recommends for these cards, and none of the kernels that ship in rocm-libs are tuned yet for the gxf1201. This performance is purely using the fallback kernels. If you believe their stats, we could see a 15%-25% bump in performance for certain model shapes. </p>
+<h3>Side Quest 4: Opencode and vLLM</h3>
+<p>I did not know what it would take to get Opencode and vLLM to play nice with each other. I will keep this brief for you, but this did take a couple of hours trying to figure out what the hell I was doing. The key things needed were the following settings in vllm and the opencode config.</p>
+<ul>
+<li><code>--tool-call-parser mistral</code></li>
+<li><code>--tokenizer_mode mistral</code> </li>
+<li><code>--enable-auto-tool-choice</code></li>
+<li><code>--chat-template-content-format string</code> </li>
+</ul>
+<p>Full command used:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">MODEL_PATH</span><span class="o">=</span><span class="s1">&#39;mistralai/Devstral-Small-2-24B-Instruct-2512&#39;</span>
+vllm<span class="w"> </span>serve<span class="w"> </span><span class="nv">$MODEL_PATH</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--port<span class="w"> </span><span class="m">8000</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-model-len<span class="w"> </span><span class="m">150000</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tensor-parallel-size<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--gpu-memory-utilization<span class="w"> </span><span class="m">0</span>.90<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-num-seqs<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--dtype<span class="w"> </span>auto<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tool-call-parser<span class="w"> </span>mistral<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--enable-auto-tool-choice<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--chat-template-content-format<span class="w"> </span>string<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tokenizer_mode<span class="w"> </span>mistral<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--trust-remote-code<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--skip-mm-profiling<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--limit-mm-per-prompt<span class="w"> </span><span class="s1">&#39;{&quot;image&quot;: 2}&#39;</span>
+<span class="w">      </span>rocm/vllm-dev:rocm7.2_navi_ubuntu24.04_py3.12_pytorch_2.9_vllm_0.14.0rc0
+</code></pre></div>
+
+<p>Full Opencode json config:</p>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="nt">&quot;$schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://opencode.ai/config.json&quot;</span><span class="p">,</span>
+
+<span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bash&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;edit&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;write&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;read&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;grep&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;glob&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;list&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;lsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;patch&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;skill&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;todowrite&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;todoread&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;webfetch&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">   </span><span class="p">},</span>
+
+<span class="w">  </span><span class="nt">&quot;provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;warpspace-vllm&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;npm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;@ai-sdk/openai-compatible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vLLM (Warpspace)&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;options&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;baseURL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://10.0.1.141:8000/v1&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;apiKey&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shouldnotmatteri&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;supportsStreaming&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;mistralai/Devstral-Small-2-24B-Instruct-2512&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mistralai/Devstral-Small-2-24B-Instruct-2512&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>Let’s Put a Bow on This Llama</h2>
+<p>Thank you for sticking it out until the end. I stand by my statement that choosing AMD is choosing hard mode for AI. If you want something that "just works" and you have the money, just buy Nvidia or a Mac M4 Studio. For me though, this friction is what's necessary for me to learn. I'm not expert when it comes to AI, and pretend to be at work most times, but these past few weeks have demystified gen-ai for me. If you have any questions you either already know me, or you can @androiddrew on the <a href="https://discord.gg/amd-dev">AMD Developer Community Discord</a>.</p>
+    </article>
+
+        <div class="tags">
+            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/amd.html">amd</a></p>
+        </div>
+
+
+        </div>
+      </div>
+    </main>
+    <!-- End Main Content -->
+    <hr class="mt-12" />
+    <!-- Footer -->
+<footer>
+    <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div class="mt-8 flex justify-center space-x-6">
+      </div>
+      <p class="mt-8 text-center text-base text-gray-400">
+        &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
+      </p>
+    </div>
+  </footer>
+    <!-- End Footer -->
+    <!-- Custom Theme JavaScript -->
+    <script src="https://androiddrew.github.io/theme/js/ruckenwind.js"></script>
+ 
+    
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'G-Q1PJ9PSLM4', 'auto');
+    ga('send', 'pageview');
+</script>
+
+  </body>
+</html>
