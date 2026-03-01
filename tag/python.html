@@ -25,7 +25,7 @@
     <link rel="icon" href="/images/icons/favicon-32x32.png">
 </head>
 
-<body class="bg-gray-50 text-xl">
+<body class="bg-gray-50 dark:bg-gray-900 text-xl">
 <header>
     <div class="relative">
       <div class="absolute inset-0">
@@ -52,7 +52,7 @@
       <!-- Button -->
       <!-- Hidden on smaller screens but on md(and up) display as block -->
   <!-- Hamburger Icon -->
-  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-hidden">
       <span class="hamburger-top"></span>
       <span class="hamburger-middle"></span>
       <span class="hamburger-bottom"></span>
@@ -61,7 +61,7 @@
   <!-- Mobile Menu -->
   <div class="md:hidden">
       <!-- Because it is being placed in the relative div above. -->
-      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+      <div id="menu" class="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
@@ -79,53 +79,51 @@
   </header>
 
     <!-- Main Content -->
-    <main class="text-gray-900">
-      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
-        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
-      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
-          <div class="mx-4">  -->
-      <article class="prose">
-        <hr class="">
+    <main class="text-gray-900 dark:text-gray-100 overflow-x-hidden">
+      <div class="mt-16 mx-auto max-w-[586px] px-4">
+        <div class="space-y-6 md:space-y-10 lg:space-y-12">
+      <article class="prose dark:prose-invert">
+        <hr class="border-gray-200 dark:border-gray-700">
         <a class="no-underline" href="https://androiddrew.github.io/2024/02/learning-observability-part-1/"><h2
-          class="my-2 text-3xl md:text-4xl font-extrabold text-gray-800 hover:text-indigo-500 tracking-wide duration-300">
+          class="not-prose my-2 text-3xl md:text-4xl font-extrabold text-gray-800 dark:text-gray-100 hover:text-indigo-500 tracking-wide duration-300">
           Learning Observability Part 1
         </h2></a>
         <p class="text-xl">
           I am going on a trip down the observability lane. Recently at work, we decided to adopt OpenTelemetry to provide observability to our...
         </p>
-        <p class="italic text-lg text-gray-500 mt-6">
-          Posted by 
-          <a class="text-gray-800 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/author/drew-bednar.html">Drew Bednar</a>
+        <p class="italic text-lg text-gray-500 dark:text-gray-400 mt-6">
+          Posted by
+          <a class="text-gray-800 dark:text-gray-300 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/author/drew-bednar.html">Drew Bednar</a>
           on February 16, 2024
         </p>
       </article>
-      <article class="prose">
-        <hr class="">
+      <article class="prose dark:prose-invert">
+        <hr class="border-gray-200 dark:border-gray-700">
         <a class="no-underline" href="https://androiddrew.github.io/2022/04/ros-catkin-virtualenv-intro/"><h2
-          class="my-2 text-3xl md:text-4xl font-extrabold text-gray-800 hover:text-indigo-500 tracking-wide duration-300">
+          class="not-prose my-2 text-3xl md:text-4xl font-extrabold text-gray-800 dark:text-gray-100 hover:text-indigo-500 tracking-wide duration-300">
           Packaging Python Virtualenvs in ROS Noetic
         </h2></a>
         <p class="text-xl">
           In this tutorial, we will learn how to use Python virtual environments in ROS Noetic packages by building a simple Flask application...
         </p>
-        <p class="italic text-lg text-gray-500 mt-6">
-          Posted by 
-          <a class="text-gray-800 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/author/drew-bednar.html">Drew Bednar</a>
+        <p class="italic text-lg text-gray-500 dark:text-gray-400 mt-6">
+          Posted by
+          <a class="text-gray-800 dark:text-gray-300 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/author/drew-bednar.html">Drew Bednar</a>
           on April 24, 2022
         </p>
       </article>
-      <article class="prose">
-        <hr class="">
+      <article class="prose dark:prose-invert">
+        <hr class="border-gray-200 dark:border-gray-700">
         <a class="no-underline" href="https://androiddrew.github.io/2020/06/pupper-pt1/"><h2
-          class="my-2 text-3xl md:text-4xl font-extrabold text-gray-800 hover:text-indigo-500 tracking-wide duration-300">
+          class="not-prose my-2 text-3xl md:text-4xl font-extrabold text-gray-800 dark:text-gray-100 hover:text-indigo-500 tracking-wide duration-300">
           The Pupper Robot Build
         </h2></a>
         <p class="text-xl">
           The Standford Pupper I subscribe to the most excellent news letter Weekly Robotics and issue #89 happened to feature a fascinating open...
         </p>
-        <p class="italic text-lg text-gray-500 mt-6">
-          Posted by 
-          <a class="text-gray-800 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/author/drew-bednar.html">Drew Bednar</a>
+        <p class="italic text-lg text-gray-500 dark:text-gray-400 mt-6">
+          Posted by
+          <a class="text-gray-800 dark:text-gray-300 hover:text-indigo-500 hover:underline duration-500" href="https://androiddrew.github.io/author/drew-bednar.html">Drew Bednar</a>
           on June 21, 2020
         </p>
       </article>
@@ -134,13 +132,13 @@
       </div>
     </main>
     <!-- End Main Content -->
-    <hr class="mt-12" />
+    <hr class="mt-12 border-gray-200 dark:border-gray-700" />
     <!-- Footer -->
-<footer>
+<footer class="bg-gray-50 dark:bg-gray-900">
     <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
       <div class="mt-8 flex justify-center space-x-6">
       </div>
-      <p class="mt-8 text-center text-base text-gray-400">
+      <p class="mt-8 text-center text-base text-gray-400 dark:text-gray-500">
         &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
       </p>
     </div>

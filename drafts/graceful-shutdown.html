@@ -43,7 +43,7 @@
     <link rel="icon" href="/images/icons/favicon-32x32.png">
 </head>
 
-<body class="bg-gray-50 text-xl">
+<body class="bg-gray-50 dark:bg-gray-900 text-xl">
     <header>
       <div class="relative">
         <div class="absolute inset-0">
@@ -71,7 +71,7 @@
       <!-- Button -->
       <!-- Hidden on smaller screens but on md(and up) display as block -->
   <!-- Hamburger Icon -->
-  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-hidden">
       <span class="hamburger-top"></span>
       <span class="hamburger-middle"></span>
       <span class="hamburger-bottom"></span>
@@ -80,7 +80,7 @@
   <!-- Mobile Menu -->
   <div class="md:hidden">
       <!-- Because it is being placed in the relative div above. -->
-      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+      <div id="menu" class="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
@@ -98,13 +98,11 @@
     </header>
 
     <!-- Main Content -->
-    <main class="text-gray-900">
-      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
-        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
-      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
-          <div class="mx-4">  -->
+    <main class="text-gray-900 dark:text-gray-100 overflow-x-hidden">
+      <div class="mt-16 mx-auto max-w-prose px-4">
+        <div class="space-y-6 md:space-y-10 lg:space-y-12">
     <!-- Post Content -->
-    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+    <article class="content prose prose-lg dark:prose-invert prose-a:hover:text-indigo-500 prose-img:mx-auto lg:prose-xl">
         <p>The moment I noticed the WAL file for my sqlite database was still there, I knew I was doing it wrong. I hope this helps you avoid the same problem.</p>
 <h1>Graceful Shutdown of Your Golang HTTP Server</h1>
 <ul>
@@ -118,7 +116,7 @@
     </article>
 
         <div class="tags">
-            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/golang.html">golang</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/webdev.html">webdev</a></p>
+            <p>tags: <a class="hover:text-indigo-500 dark:hover:text-indigo-400 duration-300 underline" href="https://androiddrew.github.io/tag/golang.html">golang</a>, <a class="hover:text-indigo-500 dark:hover:text-indigo-400 duration-300 underline" href="https://androiddrew.github.io/tag/webdev.html">webdev</a></p>
         </div>
 
 
@@ -126,13 +124,13 @@
       </div>
     </main>
     <!-- End Main Content -->
-    <hr class="mt-12" />
+    <hr class="mt-12 border-gray-200 dark:border-gray-700" />
     <!-- Footer -->
-<footer>
+<footer class="bg-gray-50 dark:bg-gray-900">
     <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
       <div class="mt-8 flex justify-center space-x-6">
       </div>
-      <p class="mt-8 text-center text-base text-gray-400">
+      <p class="mt-8 text-center text-base text-gray-400 dark:text-gray-500">
         &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
       </p>
     </div>

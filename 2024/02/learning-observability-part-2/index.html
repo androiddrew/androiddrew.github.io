@@ -45,7 +45,7 @@
     <link rel="icon" href="/images/icons/favicon-32x32.png">
 </head>
 
-<body class="bg-gray-50 text-xl">
+<body class="bg-gray-50 dark:bg-gray-900 text-xl">
     <header>
       <div class="relative">
         <div class="absolute inset-0">
@@ -73,7 +73,7 @@
       <!-- Button -->
       <!-- Hidden on smaller screens but on md(and up) display as block -->
   <!-- Hamburger Icon -->
-  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-none">
+  <button id="menu-btn" class="m-3 mr-6 p-3 block hamburger md:hidden focus:outline-hidden">
       <span class="hamburger-top"></span>
       <span class="hamburger-middle"></span>
       <span class="hamburger-bottom"></span>
@@ -82,7 +82,7 @@
   <!-- Mobile Menu -->
   <div class="md:hidden">
       <!-- Because it is being placed in the relative div above. -->
-      <div id="menu" class="bg-gray-50 text-gray-800 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
+      <div id="menu" class="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 absolute flex-col items-center self-end hidden py-8 mt- space-y-3 font-bold sm:w-auto sm:self-center left-6 right-6 drop-shadow-md">
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="https://androiddrew.github.io/">Androiddrew</a>
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/categories.html">Categories</a>
         <a class="underline px-4 py-2 uppercase font-semibold hover:text-indigo-500 duration-300 tracking-wide" href="/tags.html">Tags</a>
@@ -100,13 +100,11 @@
     </header>
 
     <!-- Main Content -->
-    <main class="text-gray-900">
-      <div class="mt-16 flex justify-center space-x-6 mx-auto max-w-3xl">
-        <div class="mx-4 space-y-6 md:space-y-10 lg:space-y-12">
-      <!-- <div class="mt-16 flex justify-center mx-auto max-w-3xl">
-          <div class="mx-4">  -->
+    <main class="text-gray-900 dark:text-gray-100 overflow-x-hidden">
+      <div class="mt-16 mx-auto max-w-prose px-4">
+        <div class="space-y-6 md:space-y-10 lg:space-y-12">
     <!-- Post Content -->
-    <article class="content prose prose-lg hover:prose-a:text-indigo-500 prose-img:mx-auto lg:prose-xl">
+    <article class="content prose prose-lg dark:prose-invert prose-a:hover:text-indigo-500 prose-img:mx-auto lg:prose-xl">
         <p>We move on from the why in <a href="https://androiddrew.github.io/2024/02/learning-observability-part-1/">learning-observability-part-1</a> to the how in this entry by using docker-compose to deploy a single node Elastic and Kibana service to the lab. </p>
 <h2>What and where are we deploying?</h2>
 <p>As mentioned in the first entry of this series, <a href="https://www.elastic.co/">Elastic and Kibana</a> will be serving as the logging infrastructure to our <a href="https://opentelemetry.io/">OpenTelemetry</a> observability stack. Elastic can be a little resource intensive, but as long as we have 2 CPU cores, 4-8 GB of RAM, and 50-ish GB of disk we can have a decent lab setup. I am fortunate enough to have a spare 2011 Dell Optiplex 7010 with a 4-core Intel7 (with hyper threading), 32 GB of RAM ( DDR3-1600 so “not fast” by today’s standards), and a 500 GB SSD, which I will be using for this setup. These are cheap to get parts for, and you can usually find them in liquidation auctions or university surplus stores. Their price coupled with the low power consumption of 250 Watts, makes them a great lab machine.</p>
@@ -355,7 +353,7 @@
     </article>
 
         <div class="tags">
-            <p>tags: <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/otel.html">otel</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/opentelemetry.html">opentelemetry</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/elastic.html">elastic</a>, <a class="hover:text-indigo-500 duration-300 underline" href="https://androiddrew.github.io/tag/kibana.html">kibana</a></p>
+            <p>tags: <a class="hover:text-indigo-500 dark:hover:text-indigo-400 duration-300 underline" href="https://androiddrew.github.io/tag/otel.html">otel</a>, <a class="hover:text-indigo-500 dark:hover:text-indigo-400 duration-300 underline" href="https://androiddrew.github.io/tag/opentelemetry.html">opentelemetry</a>, <a class="hover:text-indigo-500 dark:hover:text-indigo-400 duration-300 underline" href="https://androiddrew.github.io/tag/elastic.html">elastic</a>, <a class="hover:text-indigo-500 dark:hover:text-indigo-400 duration-300 underline" href="https://androiddrew.github.io/tag/kibana.html">kibana</a></p>
         </div>
 
 
@@ -363,13 +361,13 @@
       </div>
     </main>
     <!-- End Main Content -->
-    <hr class="mt-12" />
+    <hr class="mt-12 border-gray-200 dark:border-gray-700" />
     <!-- Footer -->
-<footer>
+<footer class="bg-gray-50 dark:bg-gray-900">
     <div class="mx-auto max-w-7xl overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
       <div class="mt-8 flex justify-center space-x-6">
       </div>
-      <p class="mt-8 text-center text-base text-gray-400">
+      <p class="mt-8 text-center text-base text-gray-400 dark:text-gray-500">
         &copy; <script>document.write( new Date().getFullYear())</script> Drew Bednar. All rights reserved.
       </p>
     </div>
